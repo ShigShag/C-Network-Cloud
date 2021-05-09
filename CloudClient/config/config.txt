@@ -1,0 +1,4 @@
+ip 127.0.0.1
+port 8080
+receive_timeout 0
+identity_path config/identity.txt

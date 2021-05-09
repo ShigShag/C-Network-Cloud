@@ -1,0 +1,9 @@
+CloudClient/bin/
+CloudClient/obj/
+CloudClient/.vscode/
+CloudServer/bin/
+CloudServer/obj/
+CloudServer/.vscode/
+CloudServer/cloud/
+var.c
+

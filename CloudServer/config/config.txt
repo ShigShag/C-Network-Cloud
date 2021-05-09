@@ -1,0 +1,6 @@
+port 8080
+receive_timeout 0
+mode 1
+max_clients 550
+cloud_directory cloud/
+client_database_path config/client_database.txt
