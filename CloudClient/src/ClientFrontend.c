@@ -10,6 +10,8 @@ void *Main_Routine_Front_End(void *arg)
     Client *c = a->client;
     Interface *i = a->interface;
 
+    char input[1024];
+
     i->front_end_finished = 0;
 
     while(c->Active)
@@ -36,8 +38,14 @@ void *Main_Routine_Front_End(void *arg)
             }
 
             printf(">>>");
-            fgets(i->input, i->input_size, stdin);
-            i->input[strlen(i->input) - 1] = '\0';
+            fgets(input, 1024, stdin);
+            input[strlen(input) - 1] = '\0';
+
+            if(Set_Input(i, input) == 0)
+            {
+                Error_Interface(i, "Input failed exiting...\n");
+                c->Active = 0;
+            }
 
             i->back_end_finished  = 0;
             i->front_end_finished = 1;

@@ -35,6 +35,7 @@ typedef struct
 
     /* Front end input */
     int max_args;
+    int max_arg_length;
     char **args;
     int number_of_arguments;
 
@@ -43,8 +44,10 @@ typedef struct
 /* Interface */
 Interface *Create_Interface();
 void Delete_Interface(Interface *i);
+
 int Set_Input(Interface *i, char *input);
 void Output_Interface(Interface *i, char *s);
+
 void Error_Interface(Interface *i, char *s);
 
 #endif

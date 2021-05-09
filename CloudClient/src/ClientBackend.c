@@ -122,9 +122,17 @@ void *Main_Routine_Back_End(void *arg)
         {
             if(i->front_end_finished)
             {
-                printf("Front end finished\n");
-                token = Translate_Input(i);
-                printf("Token: %d\n",  token);
+                /* Check if input was given */
+                if(i->number_of_arguments < 1)
+                {
+                    Error_Interface(i, "Not engouh arguments");
+                    i->front_end_finished = 0;
+                    i->back_end_finished = 1;
+                    continue;
+                }
+                
+                token = Translate_Input(i->args[0]);
+
                 switch (token)
                 {
                 case INTERNAL_EXIT:
@@ -135,7 +143,7 @@ void *Main_Routine_Back_End(void *arg)
                     Error_Interface(i, "Wrong input");
                     break;
 
-                case SEND_FILE:
+                case PUSH_FILE:
                     Send_File(c, i);
                     break;
 
@@ -161,22 +169,21 @@ void *Main_Routine_Back_End(void *arg)
     Delete_Client(c);
     return 0;
 }
-int Translate_Input(Interface *i)
+int Translate_Input(char *input)
 {
-    if(i == NULL) return 0;
-    if(i->input == NULL) return 0;
+    if(input == NULL) return 0;
  
     /* Token are defined in Communication.h */
-    if(!strcmp(i->input, "send")){
-        return SEND_FILE;
+    if(!strcmp(input, "push")){
+        return PUSH_FILE;
     }
-    if(!strcmp(i->input, "exit")){
+    if(!strcmp(input, "exit")){
         return INTERNAL_EXIT;
     }
-    if(!strcmp(i->input, "list")){
+    if(!strcmp(input, "list")){
         return LIST_FILE;
     }
-    if(!strcmp(i->input, "pull")){
+    if(!strcmp(input, "pull")){
         return PULL_FILE;
     }
     else{
@@ -195,14 +202,21 @@ void Send_File(Client *c, Interface *i)
     clock_t begin, end;
     double total_time;
 
-    f_path = Get_File_Path_Via_Dialog();
+    if(i->number_of_arguments < 2)
+    {
+        Error_Interface(i, "Not enough arguments for push");
+        return;
+    }
+
+    /*f_path = Get_File_Path_Via_Dialog();
     if(f_path == NULL)
     {
         Error_Interface(i, "Could not gather the full path of the file");
         return;
     }
 
-    int fd = open(f_path, O_RDONLY);
+    int fd = open(f_path, O_RDONLY);*/
+    int fd = open(i->args[1], O_RDONLY);
     if(fd  == -1)
     {
         printf("Could not  open file: %s\n", strerror(errno));
@@ -211,13 +225,13 @@ void Send_File(Client *c, Interface *i)
 
     f_name = basename(f_path);
 
-    if(SendBytes(c, (uint8_t *) f_name, strlen(f_name) + 1, SEND_FILE) == 0)
+    if(SendBytes(c, (uint8_t *) f_name, strlen(f_name) + 1, PUSH_FILE) == 0)
     {
         Error_Interface(i, "Could not send Token for file transmition");
         return;
     }
 
-    if((token_recv = ReceiveBytes(c, NULL, NULL)) != SEND_FILE)
+    if((token_recv = ReceiveBytes(c, NULL, NULL)) != PUSH_FILE)
     {
         switch (token_recv)
         {
@@ -246,7 +260,7 @@ void Send_File(Client *c, Interface *i)
     Output_Interface(i, "Send File was successfull");
 }
 /* File pulling */
-void Pull_File(Client *c, Interface *i, char *argument)
+void Pull_File(Client *c, Interface *i)
 {
     if(c == NULL || i == NULL) return;
 

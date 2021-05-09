@@ -10,10 +10,9 @@
 
 #define ERROR_TOKEN 0xF
 
-#define SEND_FILE 0x5
+#define PUSH_FILE 0x5
 #define PULL_FILE 0x6
 #define LIST_FILE 0x7
-#define PULL_FILE 0x8
 
 #define HEADER_SIZE 5
 

@@ -9,10 +9,22 @@ Interface *Create_Interface()
         return NULL;
     }
     i->max_args = 10;
+    i->max_arg_length = PATH_MAX + 1;
     i->args = (char **) malloc(i->max_args * sizeof(char *));
+
     for(int n = 0;n < i->max_args;n++)
     {
-        i->args[n] = NULL;
+        i->args[n] = (char *) malloc((i->max_arg_length) * sizeof(char));
+        if(i->args[n] == NULL)
+        {
+            printf("[-] Could not allocate memory for Interface: %s\n", strerror(errno));
+            for(int x = 0;x < n;n++)
+            {
+                free(i->args[x]);
+                free(i);
+            }
+            return NULL;            
+        }
     }
 
     if(i->args == NULL)
@@ -35,9 +47,9 @@ void Delete_Interface(Interface *i)
 
     free(i->error);
     free(i->output);
-    for(int n = 0;n < i->max_args;i++)
+    for(int n = 0;n < i->max_args;n++)
     {
-        if(i->args[n] != NULL) free(i->args[n]);
+        free(i->args[n]);
     }
     free(i->args);
     free(i);
@@ -47,24 +59,16 @@ int Set_Input(Interface *i, char *input)
     if(i == NULL || input == NULL) return 0;
 
     char *token;
-    char *temp;
-    int counter = 0;
-    int size;
+    i->number_of_arguments = 0;
 
-    token = strotk(input, ' ');
+    token = strtok(input, " ");
 
-    while(token != NULL && counter < i->max_args)
+    while(token != NULL && i->number_of_arguments < i->max_args)
     {
-        size = strlen(token) + 1;
-        temp = (char *) realloc(NULL, size);
-        if(temp == NULL)
-        {
-            printf("[-] Could not reallocated memory for arg input: %s\n", strerror(errno));
-            return 0;
-        }
-        i->args[counter] = temp;
-        strncpy(i->args[counter], token, size);
-        counter ++;
+        strncpy(i->args[i->number_of_arguments], token, strlen(token) + 1);
+
+        i->number_of_arguments ++;
+        token = strtok(NULL, " ");
     }
     return 1;
 }

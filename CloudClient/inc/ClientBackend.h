@@ -43,13 +43,13 @@ int Initial_Handshake(Client *c);
 void *Main_Routine_Back_End(void *arg);
 
 /* Input translation */
-int Translate_Input(Interface *i);
+int Translate_Input(char *input);
 
 /* File transmition */
 void Send_File(Client *c, Interface *i);
 
 /* File pulling */
-void Pull_File(Client *c, Interface *i, char *argument);
+void Pull_File(Client *c, Interface *i);
 
 /* File listing */
 void List_File(Client *c, Interface *i);
