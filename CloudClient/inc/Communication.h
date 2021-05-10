@@ -66,6 +66,7 @@ int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, int32_t *id);
 
 // File transmition
 #define FILE_ALREADY_EXISTS 0x31
+#define FILE_DOES_NOT_EXIST 0x32
 
 #define FILE_HEADER_SIZE (sizeof(unsigned long)) // = 8
 #define FILE_BLOCK_SIZE 1000 * 400

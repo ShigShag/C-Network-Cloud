@@ -46,7 +46,7 @@ void *Main_Routine_Back_End(void *arg);
 int Translate_Input(char *input);
 
 /* File transmition */
-void Send_File(Client *c, Interface *i);
+void Push_File(Client *c, Interface *i);
 
 /* File pulling */
 void Pull_File(Client *c, Interface *i);

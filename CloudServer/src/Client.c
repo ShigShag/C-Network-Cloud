@@ -35,7 +35,7 @@ void *ClientRoutine(void *client)
                 break;
 
             case PULL_FILE:
-                Send_File(c);
+                Send_File(c, (char *) Buffer);
                 break;
 
             case LIST_FILE:
@@ -78,7 +78,7 @@ void Receive_File(Client *c, char *f_name)
         printf("Could not open file\n");
         return;
     }
-    printf("Start send bytes\n");
+
     if(SendBytes(c, NULL, 0, SEND_FILE) == 0)
     {
         free(path);
@@ -95,13 +95,55 @@ void Receive_File(Client *c, char *f_name)
     fclose(fp);
     free(path);
 }
-void Send_File(Client *c)
+void Send_File(Client *c, char *f_name)
 {
-    if(c == NULL) return;
+    if(c == NULL || f_name == NULL) return;
     if(!c->Active) return;
 
-
+    int fd;
+    char *path;
     
+    double begin, end;
+    float total_time;
+
+    uint64_t bytes_send;
+    
+    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
+    if(path == NULL)
+    {
+        SendBytes(c, NULL, 0, ERROR_TOKEN);
+        return;
+    }
+    append_realloc(&path, f_name);
+
+    fd = open(path, O_RDONLY);
+
+    printf("path: %s\n", path);
+
+    if(fd == -1)
+    {
+        free(path);
+        SendBytes(c, NULL, 0, FILE_DOES_NOT_EXIST);
+        printf("File does not exist\n");
+        return;
+    }
+
+    if(SendBytes(c, NULL, 0, PULL_FILE) == 0)
+    {
+        free(path);
+        printf("Send bytes failed\n");
+        close(fd);
+        return;
+    }
+
+    begin = clock();
+    bytes_send = SendFile_t(c, fd);
+    end = clock();
+    total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("%ld bytes send in %f seconds\n", bytes_send, total_time);
+
+    free(path);
+    close(fd);
 }
 void List_File(Client *c)
 {

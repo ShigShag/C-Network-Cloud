@@ -53,7 +53,7 @@ void *ClientRoutine(void *client);
 void Receive_File(Client *c, char *f_name);
 
 /* Send file to client */
-void Send_File(Client *c);
+void Send_File(Client *c, char *f_name);
 
 /* List files to client */
 void List_File(Client *c);

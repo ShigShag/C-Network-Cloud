@@ -286,53 +286,6 @@ int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *
 
     return 1;
 }
-uint64_t SendFile_t(Client *c, int fd)
-{
-    if(c == NULL || fd == -1) return 0;
-    if(c->Active == 0) return 0;
-
-    uint64_t BytesSend = 0;
-    uint64_t TotalBytesSend = 0;
-    struct stat f_stat;
-
-    if(fstat(fd, &f_stat) <  0)
-    {
-        printf("[-] fstat failed: %s\n", strerror(errno));
-        return 0;
-    }
-    
-    uint8_t *Buffer = GetFileHeader(f_stat.st_size);
-    if(Buffer == NULL) return 0;
-    
-    while(TotalBytesSend < FILE_HEADER_SIZE)
-    {
-        BytesSend = send(c->socket, Buffer + TotalBytesSend, FILE_HEADER_SIZE - TotalBytesSend, 0);
-        if (BytesSend <= 0)
-        {
-            free(Buffer);
-            ReportDisconnect(c);
-            printf("%s\n", strerror(errno));
-            return 0;
-        }
-        TotalBytesSend += BytesSend;
-    }
-    free(Buffer);
-
-    TotalBytesSend = 0;
-
-    while(TotalBytesSend < f_stat.st_size)
-    {
-        BytesSend = sendfile(c->socket, fd, NULL, FILE_BLOCK_SIZE);
-        if (BytesSend <= 0)
-        {
-            ReportDisconnect(c);
-            printf("%s\n", strerror(errno));
-            return 0;
-        }
-        TotalBytesSend += BytesSend;
-    }
-    return TotalBytesSend;
-}
 uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize)
 {
     if(c == NULL || ByteArray == NULL) return 0;
@@ -370,6 +323,55 @@ uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize)
         TotalBytesSend += BytesSend;
     }
     free(Header);
+    return TotalBytesSend;
+}
+uint64_t SendFile_t(Client *c, int fd)
+{
+    if(c == NULL || fd == -1) return 0;
+    if(c->Active == 0) return 0;
+
+    uint64_t BytesSend = 0;
+    uint64_t TotalBytesSend = 0;
+    struct stat f_stat;
+
+    if(fstat(fd, &f_stat) <  0)
+    {
+        printf("[-] fstat failed: %s\n", strerror(errno));
+        return 0;
+    }
+    printf("File size: %ld\n", f_stat.st_size);
+    
+    uint8_t *Buffer = GetFileHeader(f_stat.st_size);
+    if(Buffer == NULL) return 0;
+    
+    while(TotalBytesSend < FILE_HEADER_SIZE)
+    {
+        BytesSend = send(c->socket, Buffer + TotalBytesSend, FILE_HEADER_SIZE - TotalBytesSend, 0);
+        if (BytesSend <= 0)
+        {
+            free(Buffer);
+            ReportDisconnect(c);
+            printf("%s\n", strerror(errno));
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
+    free(Buffer);
+
+    TotalBytesSend = 0;
+
+    while(TotalBytesSend < f_stat.st_size)
+    {
+        BytesSend = sendfile(c->socket, fd, NULL, FILE_BLOCK_SIZE);
+
+        if (BytesSend <= 0)
+        {
+            ReportDisconnect(c);
+            printf("%s\n", strerror(errno));
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
     return TotalBytesSend;
 }
 uint64_t ReceiveFile(Client *c, FILE *fp)

@@ -144,7 +144,7 @@ void *Main_Routine_Back_End(void *arg)
                     break;
 
                 case PUSH_FILE:
-                    Send_File(c, i);
+                    Push_File(c, i);
                     break;
 
                 case PULL_FILE:
@@ -192,7 +192,7 @@ int Translate_Input(char *input)
 }
 
 /* File transmition */
-void Send_File(Client *c, Interface *i)
+void Push_File(Client *c, Interface *i)
 {
     if(i == NULL || c == NULL) return;
     char *f_path;
@@ -208,26 +208,23 @@ void Send_File(Client *c, Interface *i)
         return;
     }
 
-    /*f_path = Get_File_Path_Via_Dialog();
-    if(f_path == NULL)
-    {
-        Error_Interface(i, "Could not gather the full path of the file");
-        return;
-    }
+    f_path = i->args[1];
 
-    int fd = open(f_path, O_RDONLY);*/
-    int fd = open(i->args[1], O_RDONLY);
+    printf("path: %s\n", f_path);
+    int fd = open(f_path, O_RDONLY);
     if(fd  == -1)
     {
-        printf("Could not  open file: %s\n", strerror(errno));
+        printf("Could not open file: %s\n", strerror(errno));
         return;
     }
 
     f_name = basename(f_path);
+    printf("basename: %s\n", f_name);
 
     if(SendBytes(c, (uint8_t *) f_name, strlen(f_name) + 1, PUSH_FILE) == 0)
     {
-        Error_Interface(i, "Could not send Token for file transmition");
+        Error_Interface(i, "Could not send Token for push file");
+        close(fd);
         return;
     }
 
@@ -239,7 +236,7 @@ void Send_File(Client *c, Interface *i)
             Error_Interface(i, "Server returned an error");
             break;
 
-        case FILE_ALREADY_EXISTS:
+        case FILE_DOES_NOT_EXIST:
             Error_Interface(i, "File already exists on server");
             break;
         
@@ -247,6 +244,7 @@ void Send_File(Client *c, Interface *i)
             Error_Interface(i, "Server returned undefined token");
             break;
         }
+        close(fd);
         return;
     }
 
@@ -254,6 +252,7 @@ void Send_File(Client *c, Interface *i)
     bytes_send = SendFile_t(c, fd);
     end = clock();
     total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+    close(fd);
 
     printf("%ld Bytes were send in %f seconds\n", bytes_send, total_time);
 
@@ -264,17 +263,82 @@ void Pull_File(Client *c, Interface *i)
 {
     if(c == NULL || i == NULL) return;
 
+    if(i->number_of_arguments < 3)
+    {
+        Error_Interface(i, "Not enough arguments for pull");
+        return;
+    }
 
+    FILE *fp;
+
+    int token;
+    uint64_t bytes_received;
+
+    char *file_name;
+    char *destination_path;
+
+    clock_t begin, end;
+    double total_time;
+
+    file_name = i->args[1];
+    destination_path = i->args[2];
+
+    printf("file name: %s\n", file_name);
+    printf("Destination path: %s\n", destination_path);
+
+    fp = fopen(destination_path, "wb");
+    if(fp == NULL)
+    {
+        Error_Interface(i, "Could not open destination file");
+        free(file_name);
+        free(destination_path);
+        return;
+    }
+
+    if(SendBytes(c, (uint8_t *) file_name, strlen(file_name) + 1, PULL_FILE) == 0)
+    {
+        Error_Interface(i, "Could not send Token for pull file");
+        free(file_name);
+        free(destination_path);
+        return;
+    }
+
+    if((token = ReceiveBytes(c, NULL, NULL)) != PULL_FILE)
+    {
+        switch (token)
+        {
+        case ERROR_TOKEN:
+            Error_Interface(i, "Server returned an error");
+            break;
+
+        case FILE_DOES_NOT_EXIST:
+            Error_Interface(i, "File does not exist on server");
+            break;
+
+        default:
+            Error_Interface(i, "Server retruned undefined token");
+            break;
+        }
+        free(file_name);
+        free(destination_path);   
+        return;     
+    }
+
+    begin = clock();
+    bytes_received = ReceiveFile(c, fp);
+    end = clock();
+
+    total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("Received: %ld bytes in %f seconds\n", bytes_received, total_time);
+
+    fclose(fp);
 }
 void List_File(Client *c, Interface *i)
 {
     if(i == NULL || c == NULL) return;
     if(c->Active == 0) return;
 
-    uint32_t s;
-    s = SendBytes(c, NULL, 0, LIST_FILE);
-    printf("bytes send: %d\n", s);
-    if(s == 0)
+    if(SendBytes(c, NULL, 0, LIST_FILE) == 0)
     {
         Error_Interface(i, "Could not send Token for file list");
         return;
