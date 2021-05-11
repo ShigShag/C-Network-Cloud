@@ -42,6 +42,10 @@ void *ClientRoutine(void *client)
                 List_File(c);
                 break;
 
+            case DELETE_FILE:
+                Delete_File(c, (char *) Buffer);
+                break;
+ 
             default:
                 continue;
         }
@@ -189,3 +193,38 @@ void List_File(Client *c)
     printf("List was send to client\n");
 }
 
+/* Deletes a file */
+void Delete_File(Client *c, char *f_name)
+{
+    if(c == NULL) return;
+    if(!c->Active) return;
+
+    char *path;
+
+    if(f_name == 0)
+    {
+        SendBytes(c, NULL, 0, ERROR_TOKEN);
+        printf("File name was NULL\n");
+        return;
+    }
+
+    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
+    if(path == NULL)
+    {
+        SendBytes(c, NULL, 0, ERROR_TOKEN);
+        printf("Could not allocate space for path in DELETE_FILE %s\n", strerror(errno));
+        return;       
+    }
+    append_realloc(&path, f_name);
+
+    if(remove(path) == -1)
+    {
+        SendBytes(c, NULL, 0, FILE_DOES_NOT_EXIST);
+        printf("Could not delete file: %s -> %s\n", path, strerror(errno));
+        free(path);
+        return;
+    }
+
+    SendBytes(c, NULL, 0, DELETE_FILE);
+    free(path);
+}

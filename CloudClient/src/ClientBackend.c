@@ -36,6 +36,22 @@ int Connect_To_Server(Client *c)
     c->socket = socket(AF_INET, SOCK_STREAM, 0);
 
     int counter = 0;
+    struct timeval tv;
+    int err;
+
+    if(c->config->receive_timeout > 0)
+    {
+        tv.tv_sec = c->config->receive_timeout;
+        tv.tv_usec = 0;
+        err = setsockopt(c->socket, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof(tv));
+        if(err != 0)
+        {
+            printf("[-] Could not set receive timeout: %s\n", strerror(errno));
+        }else
+        {
+            printf("[+] Receive timeout set to %d seconds\n", c->config->receive_timeout);
+        }
+    }
 
     // Connect to server
     while(connect(c->socket, (struct sockaddr *)&c->addr, sizeof(c->addr)) == SOCKET_ERROR)
@@ -154,6 +170,10 @@ void *Main_Routine_Back_End(void *arg)
                 case LIST_FILE:
                     List_File(c, i);
                     break;
+
+                case DELETE_FILE:
+                    Delete_File(c, i);
+                    break;
                 
                 default:
                     break;
@@ -186,6 +206,9 @@ int Translate_Input(char *input)
     if(!strcmp(input, "pull")){
         return PULL_FILE;
     }
+    if(!strcmp(input, "delete") || !strcmp(input, "rm")){
+        return DELETE_FILE;
+    }
     else{
         return INVALID_INPUT;
     }
@@ -195,6 +218,8 @@ int Translate_Input(char *input)
 void Push_File(Client *c, Interface *i)
 {
     if(i == NULL || c == NULL) return;
+    if(c->Active == 0) return;
+
     char *f_path;
     char *f_name;
     unsigned long bytes_send;
@@ -262,6 +287,7 @@ void Push_File(Client *c, Interface *i)
 void Pull_File(Client *c, Interface *i)
 {
     if(c == NULL || i == NULL) return;
+    if(c->Active == 0) return;
 
     if(i->number_of_arguments < 3)
     {
@@ -283,23 +309,16 @@ void Pull_File(Client *c, Interface *i)
     file_name = i->args[1];
     destination_path = i->args[2];
 
-    printf("file name: %s\n", file_name);
-    printf("Destination path: %s\n", destination_path);
-
     fp = fopen(destination_path, "wb");
     if(fp == NULL)
     {
         Error_Interface(i, "Could not open destination file");
-        free(file_name);
-        free(destination_path);
         return;
     }
 
     if(SendBytes(c, (uint8_t *) file_name, strlen(file_name) + 1, PULL_FILE) == 0)
     {
         Error_Interface(i, "Could not send Token for pull file");
-        free(file_name);
-        free(destination_path);
         return;
     }
 
@@ -318,9 +337,7 @@ void Pull_File(Client *c, Interface *i)
         default:
             Error_Interface(i, "Server retruned undefined token");
             break;
-        }
-        free(file_name);
-        free(destination_path);   
+        } 
         return;     
     }
 
@@ -365,6 +382,47 @@ void List_File(Client *c, Interface *i)
     Output_Interface(i, (char *) buffer);
     if(buffer) free(buffer);
     return;
+}
+void Delete_File(Client *c, Interface *i)
+{
+    if(i == NULL || c == NULL) return;
+    if(c->Active == 0) return;  
+
+    if(i->number_of_arguments < 2)
+    {
+        Error_Interface(i, "Not enough arguments for delete");
+        return;
+    }
+
+    int token;
+    char *file_name = i->args[1];
+
+    if(SendBytes(c, (uint8_t *) file_name, strlen(file_name) + 1, DELETE_FILE) == 0)
+    {
+        Error_Interface(i, "Could not send token for DELETE_FILE");
+        return; 
+    }
+
+    if((token = ReceiveBytes(c, NULL, NULL)) != DELETE_FILE)
+    {
+        switch(token)
+        {
+        case FILE_DOES_NOT_EXIST:
+            Error_Interface(i, "File does not exist on server");
+            break;
+
+        case ERROR_TOKEN:
+            Error_Interface(i, "Error on server");
+            break;
+        
+        default:
+            Error_Interface(i, "Did not receive DELETE_FILE token from server");
+            break;
+        }
+        return;
+    }
+
+    Output_Interface(i, "[+] File was deleted");
 }
 void ReportDisconnect(Client *c)
 {

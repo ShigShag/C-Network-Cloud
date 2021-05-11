@@ -54,6 +54,9 @@ void Pull_File(Client *c, Interface *i);
 /* File listing */
 void List_File(Client *c, Interface *i);
 
+/* File deletion */
+void Delete_File(Client *c, Interface *i);
+
 /* Client quit */
 void ReportDisconnect(Client *c);
 void Delete_Client(Client *c);

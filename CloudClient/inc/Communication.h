@@ -13,6 +13,7 @@
 #define PUSH_FILE 0x5
 #define PULL_FILE 0x6
 #define LIST_FILE 0x7
+#define DELETE_FILE 0x8
 
 #define HEADER_SIZE 5
 
