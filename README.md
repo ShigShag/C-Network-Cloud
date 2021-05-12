@@ -11,5 +11,8 @@ git pull origin master
 
 ## TODOS
 ```
-filename ist komisch wenn es den schon gibt 
+Client threads when sending and receiving
+Logs
+Delete safe
+Backup when sending interrupts 
 '''
