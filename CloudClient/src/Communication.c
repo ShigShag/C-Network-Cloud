@@ -340,7 +340,7 @@ int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *
 
     return 1;
 }
-uint64_t SendFile_t(Client *c, int fd)
+uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb)
 {
     if(c == NULL || fd == -1) return 0;
     if(c->Active == 0) return 0;
@@ -348,6 +348,8 @@ uint64_t SendFile_t(Client *c, int fd)
     uint64_t BytesSend = 0;
     uint64_t TotalBytesSend = 0;
     struct stat f_stat;
+
+    int progress_bar_given = pb != NULL;
 
     if(fstat(fd, &f_stat) <  0)
     {
@@ -386,7 +388,13 @@ uint64_t SendFile_t(Client *c, int fd)
             return 0;
         }
         TotalBytesSend += BytesSend;
+        if(progress_bar_given)
+        {
+            //pb->progress = (double) TotalBytesSend / f_stat.st_size;
+            //Print_Progress_Bar(pb);
+        }
     }
+    
     return TotalBytesSend;
 }
 uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize)

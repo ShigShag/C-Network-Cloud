@@ -2,6 +2,7 @@
 #define CLIENT_BACKEND_H
 
 #include "Interface.h"
+#include "ProgressBar.h"
 #include "Config.h"
 
 #define INVALID_SOCKET (-1)

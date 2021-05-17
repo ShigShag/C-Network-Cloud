@@ -86,7 +86,7 @@ int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *
 
 /* Transmision */
 uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize);  
-uint64_t SendFile_t(Client *c, int fd);
+uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb);
 
 /* Receiving */
 uint64_t ReceiveFile(Client *c, FILE *fp);

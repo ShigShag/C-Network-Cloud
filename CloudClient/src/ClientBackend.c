@@ -226,7 +226,8 @@ void Push_File(Client *c, Interface *i)
     int token_recv;
     clock_t begin, end;
     double total_time;
-
+    ProgressBar *pb;
+    
     if(i->number_of_arguments < 2)
     {
         Error_Interface(i, "Not enough arguments for push");
@@ -242,6 +243,13 @@ void Push_File(Client *c, Interface *i)
         printf("Could not open file: %s\n", strerror(errno));
         return;
     }
+    
+    pb = Create_Progress_Bar(1, NULL, '#');
+    if(pb == NULL)
+    {
+        printf("Could not create Progress bar: %s\n", strerror(errno));
+        return;
+    }
 
     f_name = basename(f_path);
     printf("basename: %s\n", f_name);
@@ -250,6 +258,7 @@ void Push_File(Client *c, Interface *i)
     {
         Error_Interface(i, "Could not send Token for push file");
         close(fd);
+        Delete_Progress_Bar(pb);
         return;
     }
 
@@ -261,7 +270,7 @@ void Push_File(Client *c, Interface *i)
             Error_Interface(i, "Server returned an error");
             break;
 
-        case FILE_DOES_NOT_EXIST:
+        case FILE_ALREADY_EXISTS:
             Error_Interface(i, "File already exists on server");
             break;
         
@@ -270,14 +279,16 @@ void Push_File(Client *c, Interface *i)
             break;
         }
         close(fd);
+        Delete_Progress_Bar(pb);
         return;
     }
 
     begin = clock();
-    bytes_send = SendFile_t(c, fd);
+    bytes_send = SendFile_t(c, fd, pb);
     end = clock();
     total_time = (double)(end - begin) / CLOCKS_PER_SEC;
     close(fd);
+    Delete_Progress_Bar(pb);
 
     printf("%ld Bytes were send in %f seconds\n", bytes_send, total_time);
 
