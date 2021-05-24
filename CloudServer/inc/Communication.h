@@ -68,7 +68,7 @@ uint64_t SendInitialHandshake(int socket, uint8_t token, int32_t id);
 #define FILE_DOES_NOT_EXIST 0x32
 
 #define FILE_HEADER_SIZE (sizeof(unsigned long)) // = 8
-#define FILE_BLOCK_SIZE 1000 * 400     // 4 Megabytes
+#define FILE_BLOCK_SIZE 65535     // 4 Megabytes
 
 /* Header Structure:
  * [FILE BASE NAME][FILE LENGTH   ][File bytes       ]

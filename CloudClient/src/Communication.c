@@ -195,7 +195,30 @@ uint64_t SendInitialHeader(Client *c, uint8_t token, uint32_t id)
     free(Header);
     return TotalBytesSend;
 }
+uint32_t SendTransmissionClientHeader(client_t *c, uint8_t token)
+{
+    if(c == NULL) return 0;
 
+    uint32_t BytesSend;
+    uint32_t TotalBytesSend = 0;
+
+    uint8_t *Header = GetHandshakeHeader(token, c->p_id);
+    if(Header == NULL) return 0;
+
+    while(TotalBytesSend < FIRST_HANDSHAKE_HEADER_SIZE)
+    {
+        BytesSend = send(c->socket, Header + TotalBytesSend, FIRST_HANDSHAKE_HEADER_SIZE - TotalBytesSend, 0);
+        if(BytesSend <= 0)
+        {
+            printf("Send Header for transmission client failed\n");
+            free(Header);
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
+    free(Header);
+    return TotalBytesSend;
+}
 int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, int32_t *id)
 {
     if(c == NULL) return 0;
@@ -223,11 +246,9 @@ int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, int32_t *id)
     free(Buffer);
     return 1;
 }
-
-/*
-int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint32_t *id)
+int32_t ReceiveInitialHandshake_t(client_t *c, uint8_t *token)
 {
-    if(socket == -1) return 0;
+    if(c == NULL) return 0;
 
     uint64_t BytesReceived = 0;
     uint64_t TotalBytesReceived = 0;
@@ -238,7 +259,7 @@ int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint32_t *id)
 
     while(TotalBytesReceived < BytesToBeReceived)
     {
-        BytesReceived = recv(socket, Buffer + TotalBytesReceived, BytesToBeReceived - TotalBytesReceived, 0);
+        BytesReceived = recv(c->socket, Buffer + TotalBytesReceived, BytesToBeReceived - TotalBytesReceived, 0);
         if(BytesReceived <= 0)
         {
             free(Buffer);
@@ -247,11 +268,10 @@ int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint32_t *id)
         TotalBytesReceived += BytesReceived;
     }
     *token = Buffer[0];
-    *id = Uint8ToUint32(Buffer + 1);
 
     free(Buffer);
     return 1;
-}*/
+}
 uint8_t *GetHandshakeHeader(uint8_t token, int32_t id)
 {
     uint8_t *id_array;
@@ -340,7 +360,7 @@ int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *
 
     return 1;
 }
-uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb)
+uint64_t SendFile_t(Client *c, int fd)
 {
     if(c == NULL || fd == -1) return 0;
     if(c->Active == 0) return 0;
@@ -348,8 +368,6 @@ uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb)
     uint64_t BytesSend = 0;
     uint64_t TotalBytesSend = 0;
     struct stat f_stat;
-
-    int progress_bar_given = pb != NULL;
 
     if(fstat(fd, &f_stat) <  0)
     {
@@ -379,7 +397,7 @@ uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb)
 
     while(TotalBytesSend < f_stat.st_size)
     {
-        BytesSend = sendfile(c->socket, fd, NULL, FILE_BLOCK_SIZE);
+        BytesSend = sendfile(c->socket, fd, NULL, FILE_SEND_BLOCK_SIZE);
 
         if (BytesSend <= 0)
         {
@@ -388,11 +406,6 @@ uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb)
             return 0;
         }
         TotalBytesSend += BytesSend;
-        if(progress_bar_given)
-        {
-            //pb->progress = (double) TotalBytesSend / f_stat.st_size;
-            //Print_Progress_Bar(pb);
-        }
     }
     
     return TotalBytesSend;
@@ -477,7 +490,7 @@ uint64_t ReceiveFile(Client *c, FILE *fp)
     printf("File to be received is of size: %ld\n", BytesToBeReceived);
 
     free(Buffer);
-    Buffer = (uint8_t *) malloc(FILE_BLOCK_SIZE * sizeof(uint8_t));
+    Buffer = (uint8_t *) malloc(FILE_SEND_BLOCK_SIZE * sizeof(uint8_t));
     if(!Buffer)
     {
         printf("%s\n", strerror(errno));
@@ -486,7 +499,7 @@ uint64_t ReceiveFile(Client *c, FILE *fp)
     TotalBytesReceived = 0;
     while(TotalBytesReceived <  BytesToBeReceived)
     {
-        BytesReceived = recv(c->socket, Buffer, FILE_BLOCK_SIZE, 0);
+        BytesReceived = recv(c->socket, Buffer, FILE_SEND_BLOCK_SIZE, 0);
         if(BytesReceived <= 0)
         {
             ReportDisconnect(c);

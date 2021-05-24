@@ -31,6 +31,91 @@ Client *Create_Client(char *config_file_path)
 
     return c;
 } 
+
+client_t *Create_Transmission_Client(char *ip, int port, int p_id)
+{
+    if(ip == NULL || port <= 0) return NULL;
+
+    client_t *c = (client_t *) malloc(sizeof(client_t));
+    if(c == NULL)
+    {
+        printf("[-] Failed to Allocate Sapce for transmission Client: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    memset(&c->addr, 0, sizeof(c->addr));
+    c->addr.sin_family = AF_INET;
+    c->addr.sin_port = htons(port);
+    c->addr.sin_addr.s_addr = inet_addr(ip);
+    
+    c->p_id = p_id;
+    c->is_connected = 0;
+    c->thread = 0;
+    return c;
+}
+int Connect_Transmission_Client(client_t *c)
+{
+    c->socket = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Connect to server
+    while(connect(c->socket, (struct sockaddr *) &c->addr, sizeof(c->addr)) == SOCKET_ERROR)
+    {
+        usleep(100000);
+    }
+    if(Initial_Handshake_t(c) == 0) return 0;
+
+    c->is_connected = 1;
+    return 1;
+}
+int Initial_Handshake_t(client_t *c)
+{
+    if(c == NULL) return 0;
+
+    unsigned char token;
+
+    if(SendTransmissionClientHeader(c, DOWNLOAD_MODE) == 0)
+    {
+        printf("[-] Could not send initial header to server from transmission client\n");
+        return 0;
+    }
+    if(ReceiveInitialHandshake_t(c, &token) == 0)
+    {
+        printf("[-] Could not receive handshake from server in transmission client\n");
+        return 0;       
+    }
+
+    switch(token)
+    {
+    case ABORD:
+        printf("[-] Received abord from server in transmission client\n");
+        return 0;
+
+    case ALL_OK:
+        return 1;
+    
+    default:
+        printf("[-] Received unidentified token from server in transmission client: %d\n", token);
+        return 0;
+    }
+}
+
+void *Send_Packet_t(void *arg)
+{
+    if(arg == NULL) return NULL;
+
+    unsigned long bytes_send = SendFile_f((SEND_ARG *) arg);
+    printf("Send %ld bytes\n", bytes_send);
+
+    free(arg);
+}
+void Delete_Transmission_Client(client_t *c)
+{
+    if(c == NULL) return;
+
+    close(c->socket);
+    free(c);
+}
+
 int Connect_To_Server(Client *c)
 {
     c->socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -115,6 +200,7 @@ int Initial_Handshake(Client *c)
     }
 
     Set_Client_Id(c, id_recv);
+    c->id = id_recv;
     return 1;
 }
 void *Main_Routine_Back_End(void *arg)
@@ -215,6 +301,122 @@ int Translate_Input(char *input)
 }
 
 /* File transmition */
+void Push_File_f(Client *c, Interface *i)
+{
+    if(i == NULL || c == NULL) return;
+    if(c->Active == 0) return;
+
+    char *f_path;
+    char *f_name;
+    int token_recv;
+    client_t *t_arr[DYNAMIC_CLIENT_TRANSMISSION_COUNT];
+    struct stat f_stat;
+
+    /* sending packets */
+    long block_size ;
+    long remainder;
+
+    if(i->number_of_arguments < 2)
+    {
+        Error_Interface(i, "Not enough arguments for push");
+        return;
+    }
+
+    f_path = i->args[1];
+
+    int fd = open(f_path, O_RDONLY);
+    if(fd  == -1)
+    {
+        printf("Could not open file: %s\n", strerror(errno));
+        return;
+    }
+
+    if(fstat(fd, &f_stat) <  0)
+    {
+        printf("[-] fstat failed: %s\n", strerror(errno));
+        return;
+    }
+    
+    f_name = basename(f_path);
+
+    for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++)
+    {
+        client_t *temp = Create_Transmission_Client(c->config->ip, c->config->port, c->id);
+        if(temp == NULL)
+        {
+            for(int n = 0;n < i;n++)
+            {
+                Delete_Transmission_Client(t_arr[n]);
+            }
+            printf("Could not allocate space for transmission client\n");
+            close(fd);
+            return;
+        }
+        t_arr[i] = temp;
+    }
+
+    if(SendBytes(c, (uint8_t *) f_name, strlen(f_name) + 1, PUSH_FILE_FAST) == 0)
+    {
+        Error_Interface(i, "Could not send Token for push file fast");
+        close(fd);
+        return;
+    }
+
+    if((token_recv = ReceiveBytes(c, NULL, NULL)) != PUSH_FILE_FAST)
+    {
+        switch (token_recv)
+        {
+        case ERROR_TOKEN:
+            Error_Interface(i, "Server returned an error");
+            break;
+
+        case FILE_ALREADY_EXISTS:
+            Error_Interface(i, "File already exists on server");
+            break;
+        
+        default:
+            Error_Interface(i, "Server returned undefined token");
+            break;
+        }
+        close(fd);
+        return;
+    }
+
+    block_size = f_stat.st_size / DYNAMIC_CLIENT_TRANSMISSION_COUNT;
+    remainder = f_stat.st_size % DYNAMIC_CLIENT_TRANSMISSION_COUNT;
+
+    for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++)
+    {
+        if(Connect_Transmission_Client(t_arr[i]) == 0)
+        {
+            // TODO
+        } 
+    }
+
+    for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++)
+    {
+        SEND_ARG *arg = (SEND_ARG *) malloc(sizeof(SEND_ARG));
+        if(arg == NULL) continue;
+
+        off_t offset = lseek(fd, block_size * i, SEEK_SET);
+
+        arg->count = block_size;
+        arg->in = fd;
+        arg->out = t_arr[i]->socket;
+        arg->offset = offset;
+
+        int err = pthread_create(&t_arr[i]->thread, NULL, Send_Packet_t, arg);
+        if(err != 0)
+        {
+            printf("[-] Could not create thread: %s\n", strerror(errno));
+        }
+    }
+
+    // Remainder weiter machen
+
+    close(fd);
+}
+
 void Push_File(Client *c, Interface *i)
 {
     if(i == NULL || c == NULL) return;
@@ -284,7 +486,7 @@ void Push_File(Client *c, Interface *i)
     }
 
     begin = clock();
-    bytes_send = SendFile_t(c, fd, pb);
+    bytes_send = SendFile_t(c, fd);
     end = clock();
     total_time = (double)(end - begin) / CLOCKS_PER_SEC;
     close(fd);

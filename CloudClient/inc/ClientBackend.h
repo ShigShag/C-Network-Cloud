@@ -16,6 +16,9 @@ typedef struct
     int Active;
     int is_connected;
 
+    /* id */
+    int id;
+
     /* Encryption */
     unsigned char *aes_key;
     
@@ -30,10 +33,39 @@ typedef struct
     Interface *interface;
 } Interface_arg;
 
-/* ---------------------BACK-END------------------------------------- */
+/* transmission client */
+typedef struct 
+{
+    /* socket */
+    int socket;
+    struct sockaddr_in addr;
+    int is_connected;
+
+    /* Parent client id */
+    int p_id;
+
+    /* thread */
+    pthread_t thread;
+} client_t;
+
+/* Transmission client arguments */
+typedef struct
+{
+    int in;
+    int out;
+    off_t offset;
+    int count;
+} SEND_ARG;
 
 /* Client initialisation */
 Client *Create_Client(char *config_file_path);
+
+/* Transmission clients */
+client_t *Create_Transmission_Client(char *ip, int port, int p_id);
+int Connect_Transmission_Client(client_t *c);
+int Initial_Handshake_t(client_t *c);
+void *Send_Packet_t(void *arg);
+void Delete_Transmission_Client(client_t *c);
 
 /* Server connection */
 int Connect_To_Server(Client *c);

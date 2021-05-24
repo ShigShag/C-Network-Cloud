@@ -14,6 +14,7 @@
 #define PULL_FILE 0x6
 #define LIST_FILE 0x7
 #define DELETE_FILE 0x8
+#define PUSH_FILE_FAST 0x9
 
 #define HEADER_SIZE 5
 
@@ -46,6 +47,8 @@ uint64_t ReceiveBytes(Client *c, uint8_t **Destination, uint64_t *BytesReceived_
 #define TEST_MODE 0x13
 
 uint64_t SendInitialHeader(Client *c, uint8_t token, uint32_t id);
+uint32_t SendTransmissionClientHeader(client_t *c, uint8_t token);
+
 //int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint32_t *id);
 
 // Client first Answer header
@@ -62,15 +65,17 @@ uint64_t SendInitialHeader(Client *c, uint8_t token, uint32_t id);
 #define ABORD 0x25
 
 uint8_t *GetHandshakeHeader(uint8_t token, int32_t id);
-//uint64_t SendInitialHandshake(int socket, uint8_t token, uint32_t id);
 int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, int32_t *id);
+int32_t ReceiveInitialHandshake_t(client_t *c, uint8_t *token);
 
 // File transmition
 #define FILE_ALREADY_EXISTS 0x31
 #define FILE_DOES_NOT_EXIST 0x32
 
 #define FILE_HEADER_SIZE (sizeof(unsigned long)) // = 8
-#define FILE_BLOCK_SIZE 1000 * 400
+#define FILE_SEND_BLOCK_SIZE 65535
+
+#define DYNAMIC_CLIENT_TRANSMISSION_COUNT 4
 
 /* Header Structure:
  * [FILE BASE NAME][FILE LENGTH   ][File bytes       ]
@@ -86,7 +91,10 @@ int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *
 
 /* Transmision */
 uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize);  
-uint64_t SendFile_t(Client *c, int fd, ProgressBar *pb);
+uint64_t SendFile_t(Client *c, int fd);
+
+/* Transmission client */
+uint64_t SendFile_f(SEND_ARG *arg);
 
 /* Receiving */
 uint64_t ReceiveFile(Client *c, FILE *fp);
