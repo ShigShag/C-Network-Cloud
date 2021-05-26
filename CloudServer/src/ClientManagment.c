@@ -21,7 +21,7 @@ void *ClientListeningThread(void *server)
         {
             s_client = accept(s->Socket, NULL, NULL);
             ManageClient(s_client, s);
-
+            
             sleep(1);
         }
     }
@@ -148,10 +148,22 @@ void ManageClient(int socket, Server *s)
             c->Active = 0;
         }
     }
-    else if(token == ABORD)
+    else if(token == DOWNLOAD_MODE)
     {
-        return;
+        Lock_Client_Count(s);
+        for(int i = 0;i < s->clients_connected;i++)
+        {
+            if(s->CLIENT[i]->id == id  && s->CLIENT[i]->transmission_client_allowed == 1)
+            {
+                if(s->CLIENT[i]->transmission_client_count < DYNAMIC_CLIENT_TRANSMISSION_COUNT)
+                {
+                    s->CLIENT[i]->transmission_client_array[s->CLIENT[i]->transmission_client_count++] = socket;
+                }
+            }
+        }
+        Unlock_Client_Count(s);
     }
+
 }
 
 // Creates a client
@@ -183,6 +195,15 @@ Client *CreateClient(Server *s, int socket, unsigned int id)
     client->addr = client_addr;
     client->port = ntohs(client_addr.sin_port);
     client->ip = inet_ntoa(client_addr.sin_addr);
+
+    client->transmission_client_allowed = 0;
+    client->transmission_client_count = 0;
+    client->transmission_client_array = (int *) calloc(DYNAMIC_CLIENT_TRANSMISSION_COUNT, sizeof(int));
+    if(client->transmission_client_array == NULL)
+    {
+        free(client);
+        return NULL;
+    }
 
     // Client is added to server list and activatet in manage client
     client->Active = 0;
@@ -235,7 +256,7 @@ void RemoveClient(Server *s, int index)
     if(c->Active) c->Active = 0;
 
     // TODO Terminate Threads
-
+    free(c->transmission_client_array);
     close(c->socket);
 
     id = c->id;

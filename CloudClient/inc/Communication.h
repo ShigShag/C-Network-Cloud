@@ -72,14 +72,13 @@ int32_t ReceiveInitialHandshake_t(client_t *c, uint8_t *token);
 #define FILE_ALREADY_EXISTS 0x31
 #define FILE_DOES_NOT_EXIST 0x32
 
-#define FILE_HEADER_SIZE (sizeof(unsigned long)) // = 8
+#define FILE_HEADER_SIZE (sizeof(uint64_t)) // = 8
 #define FILE_SEND_BLOCK_SIZE 65535
 
-#define DYNAMIC_CLIENT_TRANSMISSION_COUNT 4
 
 /* Header Structure:
- * [FILE BASE NAME][FILE LENGTH   ][File bytes       ]
- * [NAME_MAX = 255][8 Byte        ][msg Len. Bytes   ] 
+ * [FILE LENGTH   ][File bytes       ]
+ * [8 Byte        ][msg Len. Bytes   ] 
  * */
 
 /* Header */
@@ -94,6 +93,15 @@ uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize);
 uint64_t SendFile_t(Client *c, int fd);
 
 /* Transmission client */
+/* Header Structure:
+ * [File offset   ][Byte count    ][File bytes       ]
+ * [U  long       ][U long        ][msg Len. Bytes   ] 
+ * */
+
+#define DYNAMIC_CLIENT_TRANSMISSION_COUNT 4
+#define TRANSMISSION_HEADER_SIZE (sizeof(uint64_t) * 2)  // = 16
+
+uint8_t *GetTransmissionHeader(uint64_t ByteArraySize, uint64_t offset);
 uint64_t SendFile_f(SEND_ARG *arg);
 
 /* Receiving */

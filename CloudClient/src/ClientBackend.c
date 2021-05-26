@@ -101,12 +101,13 @@ int Initial_Handshake_t(client_t *c)
 
 void *Send_Packet_t(void *arg)
 {
-    if(arg == NULL) return NULL;
+    if(arg == NULL) return (void *) 1;
 
     unsigned long bytes_send = SendFile_f((SEND_ARG *) arg);
     printf("Send %ld bytes\n", bytes_send);
 
     free(arg);
+    return (void *) 0;
 }
 void Delete_Transmission_Client(client_t *c)
 {
@@ -249,6 +250,10 @@ void *Main_Routine_Back_End(void *arg)
                     Push_File(c, i);
                     break;
 
+                case PUSH_FILE_FAST:
+                    Push_File_f(c, i);
+                    break;
+
                 case PULL_FILE:
                     Pull_File(c, i);
                     break;
@@ -291,6 +296,9 @@ int Translate_Input(char *input)
     }
     if(!strcmp(input, "pull")){
         return PULL_FILE;
+    }
+    if(!strcmp(input, "pushfast")){
+        return PUSH_FILE_FAST;
     }
     if(!strcmp(input, "delete") || !strcmp(input, "rm")){
         return DELETE_FILE;
@@ -358,6 +366,7 @@ void Push_File_f(Client *c, Interface *i)
     if(SendBytes(c, (uint8_t *) f_name, strlen(f_name) + 1, PUSH_FILE_FAST) == 0)
     {
         Error_Interface(i, "Could not send Token for push file fast");
+        for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++) Delete_Transmission_Client(t_arr[i]);
         close(fd);
         return;
     }
@@ -378,6 +387,7 @@ void Push_File_f(Client *c, Interface *i)
             Error_Interface(i, "Server returned undefined token");
             break;
         }
+        for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++) Delete_Transmission_Client(t_arr[i]);
         close(fd);
         return;
     }
@@ -389,7 +399,7 @@ void Push_File_f(Client *c, Interface *i)
     {
         if(Connect_Transmission_Client(t_arr[i]) == 0)
         {
-            // TODO
+            Delete_Transmission_Client(t_arr[i]);
         } 
     }
 
@@ -400,7 +410,9 @@ void Push_File_f(Client *c, Interface *i)
 
         off_t offset = lseek(fd, block_size * i, SEEK_SET);
 
-        arg->count = block_size;
+        if(i == DYNAMIC_CLIENT_TRANSMISSION_COUNT - 1) arg->count = block_size + remainder;
+        else arg->count = block_size;
+        
         arg->in = fd;
         arg->out = t_arr[i]->socket;
         arg->offset = offset;
@@ -412,7 +424,11 @@ void Push_File_f(Client *c, Interface *i)
         }
     }
 
-    // Remainder weiter machen
+    for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++)
+    {
+        pthread_join(t_arr[i]->thread, NULL);
+        Delete_Transmission_Client(t_arr[i]);
+    }
 
     close(fd);
 }

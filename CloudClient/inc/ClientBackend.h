@@ -51,11 +51,28 @@ typedef struct
 /* Transmission client arguments */
 typedef struct
 {
+    /* File descriptor */
     int in;
+
+    /* Socket */
     int out;
+
+    /* File offset */
     off_t offset;
+
+    /* Count of bytes to send over socket */
     int count;
 } SEND_ARG;
+
+typedef struct
+{
+    /* socket */
+    int in;
+
+    /* File to write */
+    FILE *out;
+
+} RECV_ARG;
 
 /* Client initialisation */
 Client *Create_Client(char *config_file_path);
@@ -80,6 +97,8 @@ int Translate_Input(char *input);
 
 /* File transmition */
 void Push_File(Client *c, Interface *i);
+
+void Push_File_f(Client *c, Interface *i);
 
 /* File pulling */
 void Pull_File(Client *c, Interface *i);

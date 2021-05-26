@@ -35,6 +35,11 @@ typedef struct
     int port;
     char *ip;
 
+    /* Fast transmission clients */
+    int transmission_client_allowed;
+    int transmission_client_count;
+    int *transmission_client_array;
+
     /* Status */
     int Active;
     int test_mode;
@@ -47,10 +52,22 @@ typedef struct
     char *server_cloud_directory;
 } Client;
 
+typedef struct
+{
+    /* socket */
+    int in;
+
+    /* File to write */
+    FILE *out;
+
+} RECV_ARG;
+
 void *ClientRoutine(void *client);
 
 /* Receive file from client */
 void Receive_File(Client *c, char *f_name);
+
+void Receive_File_Fast(Client *c, char *f_name);
 
 /* Send file to client */
 void Send_File(Client *c, char *f_name);
@@ -60,5 +77,11 @@ void List_File(Client *c);
 
 /* Deletes a file */
 void Delete_File(Client *c, char *f_name);
+
+/* Transmission Client Thread */
+void *Receive_Packet_t(void *arg);
+
+/* Resets transmission client array */
+void Reset_Client_Transmission_Array(Client *c);
 
 #endif

@@ -438,3 +438,67 @@ uint64_t ReceiveFile(Client *c, FILE *fp)
     free(Buffer);
     return TotalBytesReceived;
 }
+int32_t ProcessTransmissionHeader(uint8_t *Header, uint64_t ByteArraySize, int64_t *offset, uint64_t *count)
+{
+    if(Header == NULL || ByteArraySize != TRANSMISSION_HEADER_SIZE) return 0;
+
+    *offset = Uint8ToUint64(Header);
+    *count = Uint8ToUint64(Header + sizeof(uint64_t));
+
+    return 1;
+}
+uint64_t ReceiveFile_f(RECV_ARG *arg)
+{
+    if(arg == NULL) return 0;
+
+    uint64_t BytesReceived = 0;
+    uint64_t BytesToBeReceived = TRANSMISSION_HEADER_SIZE;
+    uint64_t TotalBytesReceived = 0;
+
+    int32_t err;
+
+    int64_t offset;
+
+    uint8_t *Buffer = (uint8_t *) malloc(TRANSMISSION_HEADER_SIZE * sizeof(uint8_t));
+    if(Buffer == NULL) return 0;
+
+    while(TotalBytesReceived < BytesToBeReceived)
+    {
+        BytesReceived = recv(arg->in, Buffer + TotalBytesReceived, BytesToBeReceived - TotalBytesReceived, 0);
+        if(BytesReceived <= 0)
+        {
+            free(Buffer);
+            printf("%s\n", strerror(errno));
+            return 0;
+        }
+        TotalBytesReceived += BytesReceived;
+    }
+
+    err = ProcessTransmissionHeader(Buffer, TotalBytesReceived, &offset, &BytesToBeReceived);
+    if(err == 0 || BytesToBeReceived == 0)
+    {
+        free(Buffer);
+        return 0;
+    }
+    free(Buffer);
+    TotalBytesReceived = 0;
+    int32_t block_size = FILE_BLOCK_SIZE * sizeof(uint8_t);
+
+    Buffer = (uint8_t *) malloc(block_size);
+
+    while(TotalBytesReceived < BytesToBeReceived)
+    {
+        BytesReceived = recv(arg->in, Buffer, block_size, 0);
+        if(BytesReceived <= 0)
+        {
+            free(Buffer);
+            printf("%s\n", strerror(errno));
+            return 0;
+        }
+        TotalBytesReceived += BytesReceived;
+        fseek(arg->out, offset, SEEK_SET);
+        offset += fwrite(Buffer, sizeof(uint8_t), BytesReceived, arg->out);
+    }
+
+    return TotalBytesReceived;
+}

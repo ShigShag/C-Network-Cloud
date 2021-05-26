@@ -349,6 +349,7 @@ uint8_t *GetFileHeader(uint64_t ByteArraySize)
         SizeArray = Uint64ToUint8(ByteArraySize);
 
         memcpy(Header, SizeArray, sizeof(uint64_t));
+        free(SizeArray);
     }
     return Header;
 }
@@ -448,6 +449,61 @@ uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize)
     }
     free(Header);
     return TotalBytesSend;
+}
+uint8_t *GetTransmissionHeader(uint64_t ByteArraySize, uint64_t offset)
+{
+    if(ByteArraySize <= 0) return NULL;
+
+    uint8_t *Header = calloc(TRANSMISSION_HEADER_SIZE, sizeof(uint8_t));
+    if(Header == NULL) return NULL;
+
+    uint8_t *SizeArray = Uint64ToUint8(offset);
+    memcpy(Header, SizeArray, sizeof(uint64_t));
+    free(SizeArray);
+
+    SizeArray = Uint64ToUint8(ByteArraySize);
+    memcpy(Header + sizeof(uint64_t), SizeArray, sizeof(uint64_t));
+    free(SizeArray);   
+    
+    return Header;
+}
+uint64_t SendFile_f(SEND_ARG *arg)
+{
+    if(arg == NULL) return 0;
+
+    uint64_t BytesSend = 0;
+    uint64_t TotalBytesSend = 0;
+    
+    uint8_t *Header = GetTransmissionHeader(arg->count, arg->offset);
+    if(Header == NULL) return 0;
+
+    while(TotalBytesSend < TRANSMISSION_HEADER_SIZE)
+    {
+        BytesSend = send(arg->out, Header + TotalBytesSend, TRANSMISSION_HEADER_SIZE - TotalBytesSend, 0);
+        if (BytesSend <= 0)
+        {
+            free(Header);
+            printf("%s\n", strerror(errno));
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
+    free(Header);
+
+    TotalBytesSend = 0;
+
+    while(TotalBytesSend < arg->count)
+    {
+        BytesSend = sendfile(arg->out, arg->in, &arg->offset, arg->count - TotalBytesSend);
+        if(BytesSend <= 0)
+        {
+            printf("%s\n", strerror(errno));
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
+
+    return TotalBytesSend;  
 }
 uint64_t ReceiveFile(Client *c, FILE *fp)
 {
