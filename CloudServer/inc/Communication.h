@@ -12,6 +12,7 @@
 #define LIST_FILE 0x7
 #define DELETE_FILE 0x8
 #define PUSH_FILE_FAST 0x9
+#define CAT_FILE 0x10
 
 /* HEADER */
 

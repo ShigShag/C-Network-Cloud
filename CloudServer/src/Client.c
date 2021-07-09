@@ -48,6 +48,10 @@ void *ClientRoutine(void *client)
             case DELETE_FILE:
                 Delete_File(c, (char *) Buffer);
                 break;
+
+            case CAT_FILE:
+                Cat_File(c, (char *) Buffer);
+                break;
  
             default:
                 continue;
@@ -309,6 +313,52 @@ void Delete_File(Client *c, char *f_name)
 
     SendBytes(c, NULL, 0, DELETE_FILE);
     free(path);
+}
+void Cat_File(Client *c, char *f_name)
+{
+    if(c == NULL || f_name == NULL) return;
+    if(!c->Active) return;
+
+    char *path;
+    int fd;
+    double begin, end;
+    float total_time;
+    uint64_t bytes_send;
+
+    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
+    if(path == NULL)
+    {
+        SendBytes(c, NULL, 0, ERROR_TOKEN);
+        return;
+    }
+    append_realloc(&path, f_name);
+
+    fd = open(path, O_RDONLY);
+    if(fd == -1)
+    {
+        free(path);
+        SendBytes(c, NULL, 0, FILE_DOES_NOT_EXIST);
+        printf("File does not exist\n");
+        return;
+    }
+
+    if(SendBytes(c, NULL, 0, CAT_FILE) == 0)
+    {
+        free(path);
+        printf("Send bytes failed\n");
+        close(fd);
+        return;
+    }
+
+    begin = clock();
+    bytes_send = SendFile_t(c, fd);
+    end = clock();
+
+    total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("%ld bytes send in %f seconds\n", bytes_send, total_time);
+
+    free(path);
+    close(fd);
 }
 void *Receive_Packet_t(void *arg)
 {

@@ -15,6 +15,10 @@
 #define LIST_FILE 0x7
 #define DELETE_FILE 0x8
 #define PUSH_FILE_FAST 0x9
+#define FILE_CAT 0x10
+
+#define HELP 0x20
+#define CLEAR 0x21
 
 #define HEADER_SIZE 5
 

@@ -109,6 +109,15 @@ void List_File(Client *c, Interface *i);
 /* File deletion */
 void Delete_File(Client *c, Interface *i);
 
+/* File cat */
+void Cat_File(Client *c, Interface *i);
+
+/* Help */
+void Help(Interface *i);
+
+/* Clear Terminal */
+void Clear_Terminal();
+
 /* Client quit */
 void ReportDisconnect(Client *c);
 void Delete_Client(Client *c);

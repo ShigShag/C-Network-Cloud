@@ -543,7 +543,7 @@ uint64_t ReceiveFile(Client *c, FILE *fp)
         printf("%s\n", strerror(errno));
         return 0;
     }
-    printf("File to be received is of size: %ld\n", BytesToBeReceived);
+    //printf("File to be received is of size: %ld\n", BytesToBeReceived);
 
     free(Buffer);
     Buffer = (uint8_t *) malloc(FILE_SEND_BLOCK_SIZE * sizeof(uint8_t));

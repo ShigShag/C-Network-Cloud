@@ -265,6 +265,18 @@ void *Main_Routine_Back_End(void *arg)
                 case DELETE_FILE:
                     Delete_File(c, i);
                     break;
+
+                case FILE_CAT:
+                    Cat_File(c, i);
+                    break;
+
+                case CLEAR:
+                    Clear_Terminal();
+                    break;
+
+                case HELP:
+                    Help(i);
+                    break;
                 
                 default:
                     break;
@@ -291,7 +303,7 @@ int Translate_Input(char *input)
     if(!strcmp(input, "exit")){
         return INTERNAL_EXIT;
     }
-    if(!strcmp(input, "list")){
+    if(!strcmp(input, "list") || !strcmp(input, "ls")){
         return LIST_FILE;
     }
     if(!strcmp(input, "pull")){
@@ -303,6 +315,15 @@ int Translate_Input(char *input)
     if(!strcmp(input, "delete") || !strcmp(input, "rm")){
         return DELETE_FILE;
     }
+    if(!strcmp(input, "cat")){
+        return FILE_CAT;
+    }
+    if(!strcmp(input, "help")){
+        return HELP;
+    }
+    if(!strcmp(input, "clear") || !strcmp(input, "cls")){
+        return CLEAR;
+    }
     else{
         return INVALID_INPUT;
     }
@@ -311,6 +332,8 @@ int Translate_Input(char *input)
 /* File transmition */
 void Push_File_f(Client *c, Interface *i)
 {
+    Error_Interface(i, "Push file fast currently work in progress...\n");
+    return;
     if(i == NULL || c == NULL) return;
     if(c->Active == 0) return;
 
@@ -326,7 +349,7 @@ void Push_File_f(Client *c, Interface *i)
 
     if(i->number_of_arguments < 2)
     {
-        Error_Interface(i, "Not enough arguments for push");
+        Error_Interface(i, "Not enough arguments for pushfast");
         return;
     }
 
@@ -387,7 +410,10 @@ void Push_File_f(Client *c, Interface *i)
             Error_Interface(i, "Server returned undefined token");
             break;
         }
-        for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++) Delete_Transmission_Client(t_arr[i]);
+        for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++) 
+        {
+            Delete_Transmission_Client(t_arr[i]);
+        }
         close(fd);
         return;
     }
@@ -454,11 +480,11 @@ void Push_File(Client *c, Interface *i)
 
     f_path = i->args[1];
 
-    printf("path: %s\n", f_path);
+    //printf("path: %s\n", f_path);
     int fd = open(f_path, O_RDONLY);
     if(fd  == -1)
     {
-        printf("Could not open file: %s\n", strerror(errno));
+        printf("Could not open file %s: %s\n", f_path, strerror(errno));
         return;
     }
     
@@ -652,6 +678,66 @@ void Delete_File(Client *c, Interface *i)
     }
 
     Output_Interface(i, "[+] File was deleted");
+}
+void Cat_File(Client *c, Interface *i)
+{
+    if(c == NULL || i == NULL) return;
+    if(c->Active == 0) return;
+
+    char *f_name;
+    int token;
+
+    if(i->number_of_arguments < 2)
+    {
+        Error_Interface(i, "Not enough arguments for cat");
+        return;
+    }
+
+    f_name = i->args[1];
+
+    if(SendBytes(c, (uint8_t *) f_name, strlen(f_name) + 1, FILE_CAT) == 0)
+    {
+        Error_Interface(i, "Could not send Token for cat file");
+        return;
+    }
+
+    if((token = ReceiveBytes(c, NULL, NULL)) != FILE_CAT)
+    {
+        switch (token)
+        {
+        case ERROR_TOKEN:
+            Error_Interface(i, "Server returned an error");
+            break;
+
+        case FILE_DOES_NOT_EXIST:
+            Error_Interface(i, "File does not exist on server");
+            break;
+
+        default:
+            Error_Interface(i, "Server retruned undefined token");
+            break;
+        } 
+        return;     
+    }
+
+    ReceiveFile(c, stdout);
+}
+void Help(Interface *i)
+{
+    char *help = "Commands:\n"
+    "exit                                        -> exits the application\n"
+    "list                                        -> lists all the files on the server\n"
+    "pull   [file name] [destination file name]  -> pull a file from the server\n"
+    "push   [file name]                          -> push a local file onto the server\n"
+    "cat    [file name]                          -> shows the content of a file from the server\n"
+    "delete [file name]                          -> delete a file from the server\n"
+    "cls/clear                                   -> clears the terminal\n"
+    "help                                        -> displays this text\n";
+    Output_Interface(i, help);
+}
+void Clear_Terminal()
+{
+    system("clear");
 }
 void ReportDisconnect(Client *c)
 {

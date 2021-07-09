@@ -78,6 +78,9 @@ void List_File(Client *c);
 /* Deletes a file */
 void Delete_File(Client *c, char *f_name);
 
+/* Cat a file */
+void Cat_File(Client *c, char *f_name);
+
 /* Transmission Client Thread */
 void *Receive_Packet_t(void *arg);
 

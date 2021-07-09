@@ -37,6 +37,7 @@ void *Main_Routine_Front_End(void *arg)
                 Output_Interface(i, NULL);
             }
 
+            memset(input, 0, 1024);
             printf(">>>");
             fgets(input, 1024, stdin);
             input[strlen(input) - 1] = '\0';
@@ -46,7 +47,6 @@ void *Main_Routine_Front_End(void *arg)
                 Error_Interface(i, "Input failed exiting...\n");
                 c->Active = 0;
             }
-
             i->back_end_finished  = 0;
             i->front_end_finished = 1;
             continue;
