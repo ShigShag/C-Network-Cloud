@@ -38,31 +38,32 @@ uint64_t ReceiveBytes(Client *c, uint8_t **Destination, uint64_t *BytesReceived_
 // Client first connection header
 /* Header Structure:
  * [Token ][Client id]
- * [1 Byte][4 Byte   ]
+ * [1 Byte][8  Byte  ]
  * */
 
-#define FIRST_COMMUNICATION_HEADER_SIZE (sizeof(uint8_t) + sizeof(uint32_t)) // = 5
+#define CLIENT_ID_SIZE sizeof(uint64_t)
+#define FIRST_COMMUNICATION_HEADER_SIZE (sizeof(uint8_t) + CLIENT_ID_SIZE) // = 9
 #define NORMAL_MODE 0x11
 #define DOWNLOAD_MODE 0x12 
 #define TEST_MODE 0x13
 
-int32_t ReceiveInitialHeader(int socket, uint8_t *token, int32_t *id);
+int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint64_t *id);
 
 // Client first Answer header
 /* Header Structure:
  * [Token ][Client id]
- * [1 Byte][4 Byte   ]
+ * [1 Byte][8  Byte  ]
  * */
 
-#define FIRST_HANDSHAKE_HEADER_SIZE (sizeof(uint8_t) + sizeof(int32_t)) // = 5
+#define FIRST_HANDSHAKE_HEADER_SIZE (sizeof(uint8_t) + CLIENT_ID_SIZE) // = 9
 #define ALL_OK 0x21
 #define SERVER_FULL 0x22
 #define DOWNLOAD_READY 0x23
 #define TEST_READY 0x24
 #define ABORD 0x25
 
-uint8_t *GetHandshakeHeader(uint8_t token, int32_t id);
-uint64_t SendInitialHandshake(int socket, uint8_t token, int32_t id);
+uint8_t *GetHandshakeHeader(uint8_t token, uint64_t id);
+uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id);
 
 
 // File transmition

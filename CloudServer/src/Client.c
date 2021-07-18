@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include "../inc/Client.h"
 #include "../inc/Communication.h"
-#include "../inc/AesUtility.h"
 #include "../inc/Misc.h"
 
 #define NULL_CHECK(val) if (val == NULL) continue;

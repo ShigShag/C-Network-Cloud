@@ -24,7 +24,10 @@
 typedef struct
 {
     /* Client id */
-    unsigned int id;
+    unsigned long id;
+
+    /* Clients directory represtend as an unsigned long */
+    unsigned long directory;
 
     /* Thread for main routine */
     pthread_t h_client;
@@ -50,6 +53,7 @@ typedef struct
     /* Cloud directory */
     char *cloud_directory;
     char *server_cloud_directory;
+    char *completed_cloud_directory;
 } Client;
 
 typedef struct

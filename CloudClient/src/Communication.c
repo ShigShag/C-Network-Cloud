@@ -168,9 +168,9 @@ uint64_t ReceiveBytes(Client *c, uint8_t **Destination, uint64_t *BytesReceived_
 // Client first connection header
 /* Header Structure:
  * [Token ][Client id]
- * [1 Byte][4 Byte   ]
+ * [1 Byte][8 Byte   ]
  * */
-uint64_t SendInitialHeader(Client *c, uint8_t token, uint32_t id)
+uint64_t SendInitialHeader(Client *c, uint8_t token, uint64_t id)
 {
     if(c == NULL) return 0;
 
@@ -219,7 +219,7 @@ uint32_t SendTransmissionClientHeader(client_t *c, uint8_t token)
     free(Header);
     return TotalBytesSend;
 }
-int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, int32_t *id)
+int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, uint64_t *id)
 {
     if(c == NULL) return 0;
 
@@ -241,7 +241,7 @@ int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, int32_t *id)
         TotalBytesReceived += BytesReceived;
     }
     *token = Buffer[0];
-    *id = Uint8ToUint32(Buffer + 1);
+    *id = Uint8ToUint64(Buffer + 1);
 
     free(Buffer);
     return 1;
@@ -272,16 +272,16 @@ int32_t ReceiveInitialHandshake_t(client_t *c, uint8_t *token)
     free(Buffer);
     return 1;
 }
-uint8_t *GetHandshakeHeader(uint8_t token, int32_t id)
+uint8_t *GetHandshakeHeader(uint8_t token, uint64_t id)
 {
     uint8_t *id_array;
     uint8_t *Header = (uint8_t *) malloc(FIRST_HANDSHAKE_HEADER_SIZE * sizeof(uint8_t));
     if(Header == NULL) return NULL;
 
     Header[0] = token;
-    id_array = Uint32ToUint8(id);
+    id_array = Uint64ToUint8(id);
 
-    memcpy(Header + 1, id_array, sizeof(int32_t));
+    memcpy(Header + 1, id_array, CLIENT_ID_SIZE);
     free(id_array);
     return Header;
 }

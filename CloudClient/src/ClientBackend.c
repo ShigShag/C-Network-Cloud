@@ -32,7 +32,7 @@ Client *Create_Client(char *config_file_path)
     return c;
 } 
 
-client_t *Create_Transmission_Client(char *ip, int port, int p_id)
+client_t *Create_Transmission_Client(char *ip, int port, unsigned long p_id)
 {
     if(ip == NULL || port <= 0) return NULL;
 
@@ -98,7 +98,6 @@ int Initial_Handshake_t(client_t *c)
         return 0;
     }
 }
-
 void *Send_Packet_t(void *arg)
 {
     if(arg == NULL) return (void *) 1;
@@ -157,9 +156,9 @@ int Initial_Handshake(Client *c)
 {
     if(c == NULL) return 0;
 
-    int id = Get_Client_Id(c);
+    unsigned long id = Get_Client_Id(c);
     unsigned char token;
-    int id_recv;
+    unsigned long id_recv;
 
     // If internal error occured
     if(id < 0)

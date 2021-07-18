@@ -1,11 +1,11 @@
 #include  "../inc/Identity.h"
 
-int Get_Client_Id(Client *c)
+unsigned long Get_Client_Id(Client *c)
 {
     if(c == NULL) return -1;
 
     FILE *fp;
-    int id = 0;
+    unsigned long id = 0;
 
     fp = fopen(c->config->identity_path, "r");
     if(fp == NULL)
@@ -14,12 +14,12 @@ int Get_Client_Id(Client *c)
         return -1;
     }
 
-    fscanf(fp, "%d", &id);
+    fscanf(fp, "%lu", &id);
 
     fclose(fp);
     return id;
 }
-int Set_Client_Id(Client *c, int id)
+int Set_Client_Id(Client *c, unsigned long id)
 {
     FILE *fp;
     int n;
@@ -31,7 +31,7 @@ int Set_Client_Id(Client *c, int id)
         return 0;
     }
 
-    n = fprintf(fp, "%d", id);
+    n = fprintf(fp, "%lu", id);
     fclose(fp);
     return n;
 }

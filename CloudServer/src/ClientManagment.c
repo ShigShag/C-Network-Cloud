@@ -1,6 +1,7 @@
 #include "../inc/ClientManagment.h"
 #include "../inc/Communication.h"
 #include "../inc/Misc.h"
+#include "../inc/Crypto.h"
 
 /* Listening */
 // Listens for new client and passes them to the manage function
@@ -66,7 +67,7 @@ void ManageClient(int socket, Server *s)
 
     Client *c;
     unsigned char token;
-    int id;
+    unsigned long id;
     int err;
     
     // Receive initial message from client
@@ -85,11 +86,12 @@ void ManageClient(int socket, Server *s)
             return;
         }
 
-        // Check if the client is already in the database
+        // Check if the client is already in the database^
         if(Client_In_Database(s, id) == 1)
         {
             // Create Client
             c = CreateClient(s, socket, id);
+            /* Hier weiter machen */
             
             // If internal error occured
             if(c == NULL)
@@ -98,9 +100,8 @@ void ManageClient(int socket, Server *s)
                 return;
             }
 
-            // Create client directory if it does not exists
-            Create_Client_Directory(s, c->cloud_directory);
-
+            // Create client directory if it does not exists -> The function will create a new directory if it doesnt already exist -> just to make sure
+            Create_Client_Directory(s, c->directory);
         }
         else
         {
@@ -114,10 +115,10 @@ void ManageClient(int socket, Server *s)
                 return;
             }
 
-            // Add new client to database
-            if(Add_Client_To_Database(s, c->id, c->cloud_directory) == 0)
+            // Add new client to database and create a new cloud directory
+            if(Add_Client_To_Database(s, c->id, c->directory) == 0)
             {
-                SendInitialHandshake(socket, ABORD, id);
+                SendInitialHandshake(socket, ABORD, c->id);
                 free(c);
                 return;
             }
@@ -139,8 +140,8 @@ void ManageClient(int socket, Server *s)
         Lock_Client_Count(s);
         s->CLIENT[s->clients_connected] = c;
         s->clients_connected ++;
-        printf("[!] New client with id: %u\n", c->id);
         Unlock_Client_Count(s);
+        printf("[!] New client with id: %lu\n", c->id);
 
         // Send ok and id & check for fail
         if(SendInitialHandshake(c->socket, ALL_OK, c->id) == 0)
@@ -167,7 +168,7 @@ void ManageClient(int socket, Server *s)
 }
 
 // Creates a client
-Client *CreateClient(Server *s, int socket, unsigned int id)
+Client *CreateClient(Server *s, int socket, unsigned long id)
 {
     if(s == NULL)
     {
@@ -216,18 +217,31 @@ Client *CreateClient(Server *s, int socket, unsigned int id)
         return NULL;
     }
 
+    // Check if id is given if not create a new one
     if(id == 0)
     {
+        unsigned long r;
+        // Generate Client ID
         while(1){
-            client->id = rand();
-            if(!Client_In_Database(s, id)) break;
+            get_random_unsigned_long(&r);
+            if(Client_In_Database(s, r) == 0) break;
         }
-        sprintf(client->cloud_directory, "%d/", client->id);
+        client->id = r;
+
+        // Generate Client Cloud directory name
+        while(1){
+            get_random_unsigned_long(&r);
+            if(Directory_In_Database(s, r) == 0) break;
+        }
+        client->directory = r;
+
+        get_random_unsigned_long(&r);
     }else
     {
         client->id = id;
-        sprintf(client->cloud_directory, "%d/", client->id);
+        client->directory = Get_Client_Directory(s, client->id);
     }
+    snprintf(client->cloud_directory, (NAME_MAX + 1) * sizeof(char), "%lu/", client->directory);
 
     client->server_cloud_directory = (char *) malloc((strlen(s->config->cloud_directory) + 1) * sizeof(char));
     if(client->server_cloud_directory == NULL)
@@ -236,8 +250,16 @@ Client *CreateClient(Server *s, int socket, unsigned int id)
         return NULL;
     }
 
+    // This line makes sense
     strncpy(client->server_cloud_directory, s->config->cloud_directory, (strlen(s->config->cloud_directory) + 1) * sizeof(char));
 
+    client->completed_cloud_directory = (char *) malloc((PATH_MAX + 1) * sizeof(char));
+    if(client->server_cloud_directory == NULL)
+    {
+        free(client);
+        return NULL;
+    }
+    client->completed_cloud_directory = append_malloc(client->server_cloud_directory, client->cloud_directory);
     return client;
 }
 
@@ -249,7 +271,7 @@ void RemoveClient(Server *s, int index)
     if(s->Client_Lock == 0) return;
     if(index >= s->max_clients || index >= s->clients_connected) return;
     
-    long int id;
+    unsigned long id;
     Client *c = s->CLIENT[index];
     int i = index;
 
@@ -258,6 +280,9 @@ void RemoveClient(Server *s, int index)
     // TODO Terminate Threads
     free(c->transmission_client_array);
     close(c->socket);
+    free(c->cloud_directory);
+    free(c->server_cloud_directory);
+    free(c->completed_cloud_directory);
 
     id = c->id;
 
@@ -268,7 +293,7 @@ void RemoveClient(Server *s, int index)
         s->CLIENT[i] = s->CLIENT[i + 1];
     }
     s->clients_connected --;
-    printf("[!] Removed client with id: %ld\n", id);  
+    printf("[!] Removed client with id: %lu\n", id);  
 }
 // Removes all clients by calling RemoveClient() until client list is empty
 void RemoveAllClients(Server *s)

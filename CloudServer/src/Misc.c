@@ -138,6 +138,32 @@ int append_realloc(char **dest, char *source)
     }
     return 1;
 }
+int check_value_buffer(unsigned char *buf, unsigned char value, unsigned int count)
+{
+    if(buf == NULL) return 0;
+
+    int passed = 1;
+    for(int i = 0;i < count;i++){
+        if(buf[i] != value){
+            passed = 0;
+            break;
+        }
+    }
+    return passed;
+}
+char *convert_unsigend_char_to_hex(unsigned char *buf, unsigned int count)
+{
+    if(buf == NULL) return NULL;
+
+    unsigned int size = (count * 2 + 1) * sizeof(char);
+    char *h = (char *) malloc(size);
+    if(h == NULL) return NULL;
+
+    for(unsigned int i = 0;i < count;i++){
+        snprintf(h + 2 * i, size, "%.2x", buf[i]);
+    }
+    return h;
+}
 int File_Exists(char *path)
 {
     struct stat buffer;

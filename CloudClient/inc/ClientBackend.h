@@ -17,7 +17,7 @@ typedef struct
     int is_connected;
 
     /* id */
-    int id;
+    unsigned long id;
 
     /* Encryption */
     unsigned char *aes_key;
@@ -42,7 +42,7 @@ typedef struct
     int is_connected;
 
     /* Parent client id */
-    int p_id;
+    unsigned long p_id;
 
     /* thread */
     pthread_t thread;
@@ -78,7 +78,7 @@ typedef struct
 Client *Create_Client(char *config_file_path);
 
 /* Transmission clients */
-client_t *Create_Transmission_Client(char *ip, int port, int p_id);
+client_t *Create_Transmission_Client(char *ip, int port, unsigned long p_id);
 int Connect_Transmission_Client(client_t *c);
 int Initial_Handshake_t(client_t *c);
 void *Send_Packet_t(void *arg);

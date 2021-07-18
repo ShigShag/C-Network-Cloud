@@ -13,7 +13,7 @@ void *ClientListMonitor(void *server);
 void ManageClient(int socket, Server *s);
 
 /* Add active client in memory */
-Client *CreateClient(Server *s, int socket, unsigned int id);
+Client *CreateClient(Server *s, int socket, unsigned long id);
 
 /* Disposal */
 void RemoveClient(Server *s, int index);
