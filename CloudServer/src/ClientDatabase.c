@@ -2,6 +2,8 @@
 #include "../inc/Misc.h"
 #include "../inc/Communication.h"
 
+/* --------- client_database.txt --------- */
+
 /* Check if client is in database */
 int Client_In_Database(Server *s, unsigned long id_)
 {
@@ -158,4 +160,72 @@ int Create_Client_Directory(Server *s, unsigned long directory)
     mkdir(dir, 0755);
     free(dir);
     return 1;
+}
+
+/* --------- credentials.txt --------- */
+
+/* Add clients credentials to the database */
+int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsigned char *salt)
+{
+    if(s == NULL || pw == NULL || salt == NULL) return 0;
+
+    FILE *fp;
+    unsigned int count;
+    unsigned char *formatted;
+    unsigned long bytes_written;
+
+    fp = fopen(s->config->client_credentials_path, "ab");
+    if(fp == NULL){
+        printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
+        return 0;
+    }
+
+    formatted = Format_Client_Credentials(id, pw, salt, &count);
+    if(formatted == NULL){
+        fclose(fp);
+        return 0;
+    }
+
+    bytes_written = fwrite(formatted, sizeof(unsigned char), count, fp);
+
+    free(formatted);
+    fclose(fp);
+    return bytes_written != 0;
+}   
+unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, unsigned char *salt, unsigned int *count)
+{
+    if(pw == NULL || salt == NULL) return NULL;
+
+    unsigned char *r = (unsigned char *) calloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE, sizeof(unsigned char));
+    if(r == NULL)
+    {
+        printf("[-] Could not allocate memory for Format_Client_Credentials: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    unsigned char *id_uint8 = Uint64ToUint8(id);
+    memcpy(r, id_uint8, CLIENT_ID_SIZE * sizeof(unsigned char));
+    memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw, CLIENT_DATABASE_PASSWORD_SIZE * sizeof(unsigned char));
+    memcpy(r + ((CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_SIZE) * sizeof(unsigned char)), salt, CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
+
+    free(id_uint8);
+    *count = (CLIENT_DATABASE_TOTAL_ENTRY_SIZE) * sizeof(unsigned char);
+    return r;
+}
+
+
+/* Check password hash for a client id */
+int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
+{
+    if(s == NULL || pw == NULL) return 0;
+
+    FILE *fp = fopen(s->config->client_credentials_path, "rb");
+    if(fp == NULL){
+        printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
+        return 0;
+    }
+
+    // Hier weiter machen
+
+
 }

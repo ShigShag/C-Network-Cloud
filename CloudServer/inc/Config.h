@@ -16,6 +16,9 @@ typedef struct
     
     /* Client database path */
     char *client_database_path;
+
+    /* Client credentials path */
+    char *client_credentials_path;
 } Config;
 
 Config *Get_Config(char *f_name);

@@ -14,4 +14,10 @@ int check_value_buffer(unsigned char *buf, unsigned char value,unsigned int coun
 char *convert_unsigend_char_to_hex(unsigned char *buf, unsigned int count);
 int File_Exists(char *path);
 
+
+uint8_t *Uint32ToUint8(uint32_t value);
+uint32_t Uint8ToUint32(const uint8_t *ByteArray);
+uint8_t *Uint64ToUint8(uint64_t value);
+uint64_t Uint8ToUint64(const uint8_t *ByteArray);
+
 #endif

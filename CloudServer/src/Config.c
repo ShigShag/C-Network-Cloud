@@ -53,6 +53,14 @@ Config *Get_Config(char *f_name)
             }
             strncpy(c->client_database_path, value, strlen(value) + 1);
         }
+        else if(!strcmp(var, "client_credentials_path")){
+            c->client_credentials_path = (char *) malloc(strlen(value) +  1);
+            if(c->client_credentials_path == NULL){
+                printf("[-] Failed to allocate space for c->client_credentials_path: %s\n", strerror(errno));
+                return NULL;
+            }
+            strncpy(c->client_credentials_path, value, strlen(value) + 1);
+        }
         else{
             printf("[!] Unknown Parameter in config file: %s\n", var);
         }

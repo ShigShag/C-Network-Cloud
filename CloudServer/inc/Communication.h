@@ -24,8 +24,6 @@
  * */
 
 /*  Header */
-uint8_t *Uint32ToUint8(uint32_t value);
-uint32_t Uint8ToUint32(const uint8_t *ByteArray);
 uint8_t *GetHeader(uint32_t ByteArraySize, int32_t Token, uint32_t HeaderSize);
 uint32_t ProcessHeader(uint8_t *ByteArray, uint32_t ByteArraySize, int32_t *Token, uint32_t *MessageSize);
 
@@ -81,8 +79,6 @@ uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id);
  * */
 
 /* Header */
-uint8_t *Uint64ToUint8(uint64_t value);
-uint64_t Uint8ToUint64(const uint8_t *ByteArray);
 
 uint8_t *GetFileHeader(uint64_t ByteArraySize);
 int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *FileSize);

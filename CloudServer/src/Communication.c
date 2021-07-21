@@ -1,33 +1,7 @@
 #include "../inc/Communication.h"
 #include "../inc/ClientManagment.h"
+#include "../inc/Misc.h"
 
-uint8_t *Uint32ToUint8(uint32_t value)
-{
-    uint8_t *Array = (uint8_t *) calloc(sizeof (uint32_t), sizeof (uint8_t));
-    if(Array)
-    {
-        for(uint32_t i = 0;i < sizeof (uint32_t);i++)
-        {
-            Array[i] = (value >> ((sizeof (uint32_t) * 8) - ((i + 1) * 8))) & 0xFF;
-        }
-    }
-    return Array;
-}
-uint32_t Uint8ToUint32(const uint8_t *ByteArray)
-{
-    uint32_t value = 0;
-    uint32_t i;
-
-    if(ByteArray != NULL)
-    {
-        for (i = 0; i < sizeof (uint32_t) - 1; i++)
-        {
-            value = (value | ByteArray[i]) << 8;
-        }
-        value = (value | ByteArray[i]);
-    }
-    return value;
-}
 uint8_t *GetHeader(uint32_t ByteArraySize, int32_t Token, uint32_t HeaderSize)
 {
     uint8_t *Header = calloc(HeaderSize, sizeof(uint8_t));
@@ -236,33 +210,7 @@ uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id)
     return TotalBytesSend;
 }
 /* File transmition */
-uint8_t *Uint64ToUint8(uint64_t value)
-{
-    uint8_t *Array = (uint8_t *) calloc(sizeof (uint64_t), sizeof (uint8_t));
-    if(Array)
-    {
-        for(uint64_t i = 0;i < sizeof (uint64_t);i++)
-        {
-            Array[i] = (value >> ((sizeof (uint64_t) * 8) - ((i + 1) * 8))) & 0xFF;
-        }
-    }
-    return Array;
-}
-uint64_t Uint8ToUint64(const uint8_t *ByteArray)
-{
-    uint64_t value = 0;
-    uint32_t i;
 
-    if(ByteArray != NULL)
-    {
-        for (i = 0; i < sizeof (uint64_t) - 1; i++)
-        {
-            value = (value | ByteArray[i]) << 8;
-        }
-        value = (value | ByteArray[i]);
-    }
-    return value;
-}
 uint8_t *GetFileHeader(uint64_t ByteArraySize)
 {
     if(ByteArraySize < 0) return 0;
