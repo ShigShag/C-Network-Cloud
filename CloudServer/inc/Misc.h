@@ -20,4 +20,6 @@ uint32_t Uint8ToUint32(const uint8_t *ByteArray);
 uint8_t *Uint64ToUint8(uint64_t value);
 uint64_t Uint8ToUint64(const uint8_t *ByteArray);
 
+void free_memset(void *buf, unsigned long count);
+
 #endif

@@ -223,3 +223,10 @@ uint64_t Uint8ToUint64(const uint8_t *ByteArray)
     }
     return value;
 }
+void free_memset(void *buf, unsigned long count)
+{
+    if(buf == NULL) return;
+
+    memset(buf, 0, count);
+    free(buf);
+}
