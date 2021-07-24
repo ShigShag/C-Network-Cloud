@@ -165,6 +165,7 @@ int Create_Client_Directory(Server *s, unsigned long directory)
 /* --------- credentials.txt --------- */
 
 /* Add clients credentials to the database */
+/* Should only be called from within the ClientDatabase.c */
 int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsigned char *salt)
 {
     if(s == NULL || pw == NULL || salt == NULL) return 0;
@@ -213,6 +214,68 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
     return r;
 }
 
+/* Get clients credentials from formatted bytes */
+/* NOTE: THIS FUNCTION ASSUMES THAT pw AND salt ARE ALREADY ALLOCATED */
+int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt)
+{
+    if(formatted == NULL) return 0;
+
+    if(id != NULL) *id  = Uint8ToUint64(formatted);
+    if(pw != NULL) memcpy(pw, formatted + CLIENT_ID_SIZE, CLIENT_DATABASE_PASSWORD_SIZE);
+    if(salt != NULL) memcpy(salt, formatted + CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_SIZE, CLIENT_DATABASE_SALT_SIZE);
+    return 1;
+}
+
+/* Get clients salt */
+unsigned char *Get_Client_Salt(Server *s, unsigned long id)
+{
+    if(s == NULL) return NULL;
+
+    unsigned char *salt = (unsigned char *) malloc(CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
+    if(salt == NULL){
+        printf("[-] Could not allocate space for salt in Get_Client_Salt: %s\n", strerror(errno));
+        return NULL;
+    }
+    
+    unsigned char *client_credentials = (unsigned char *) malloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * sizeof(unsigned char));
+    if(client_credentials == NULL){
+        printf("[-] Could not allocate space for client_credentials in Get_Client_Salt: %s\n", strerror(errno));
+        free(salt);
+        return NULL;
+    }
+
+    unsigned long err = 1;
+    unsigned long id_;
+    int success = 0;
+
+    FILE *fp = fopen(s->config->client_credentials_path, "rb");
+    if(fp == NULL){
+        printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
+        return 0;
+    }
+
+    while(err != 0)
+    {
+        err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
+        if(err == 0) continue;
+
+        Get_Client_Credentials(client_credentials, &id_, NULL, salt);
+
+        if(id_ == id){
+            success = 1;
+            break;
+        }
+    }
+
+    if(success != 1){
+        free_memset(salt, CLIENT_DATABASE_SALT_SIZE);
+        salt = NULL;
+    }
+
+    free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
+
+    return salt;
+}
 
 /* Check password hash for a client id */
 int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
@@ -225,7 +288,29 @@ int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
         return 0;
     }
 
-    // Hier weiter machen
+    int equal = 1;
+    unsigned long err = 1;
 
+    unsigned long id_ = 0;
+    unsigned char *pw_ = (unsigned char *) malloc(CLIENT_DATABASE_PASSWORD_SIZE * sizeof(unsigned char));
+    unsigned char *client_credentials = (unsigned char *) malloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * sizeof(unsigned char));
 
+    while(err != 0)
+    {
+        err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
+        if(err == 0) continue;
+
+        Get_Client_Credentials(client_credentials, &id_, pw_, NULL);
+
+        if(id_ == id){
+            equal = memcmp(pw, pw_, CLIENT_DATABASE_PASSWORD_SIZE);
+            break;
+        }
+    }
+    free_memset(pw_, CLIENT_DATABASE_PASSWORD_SIZE);
+    free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
+    id_ = 0;
+
+    fclose(fp);
+    return equal == 0;
 }

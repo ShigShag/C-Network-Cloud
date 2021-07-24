@@ -29,12 +29,25 @@ int Create_Client_Directory(Server *s, unsigned long directory);
 
 /* --------- credentials.txt --------- */
 
+/* [CLIENT ID][CLIENT PW][CLIENT SALT] */
+/* [8 Byte   ][64 Byte  ][16 Bytes   ] */
+
 /* Add clients credentials to the database */
 int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsigned char *salt);
 
 /* Get clients credentials formatted for the database */
 unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, unsigned char *salt, unsigned int *count);
 
+/* Get clients credentials from formatted bytes */
+/* Should only be called from within the ClientDatabase.c */
+int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt);
+
+/* Get clients salt */
+unsigned char *Get_Client_Salt(Server *s, unsigned long id);
+
 /* Check password hash for a client id */
 int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw);
+
+
+
 #endif
