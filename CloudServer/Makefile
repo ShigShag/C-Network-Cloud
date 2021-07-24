@@ -6,6 +6,7 @@ EXE := $(BIN_DIR)/Server
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
+#test
 #CPPFLAGS := -Iinclude -MMD -MP
 CFLAGS   := -Wall
 LDFLAGS  := -Llib
