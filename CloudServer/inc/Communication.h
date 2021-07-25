@@ -63,6 +63,19 @@ int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint64_t *id);
 uint8_t *GetHandshakeHeader(uint8_t token, uint64_t id);
 uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id);
 
+/* Password check */
+
+/* Password message structure */
+/* Description: [Token ][Password length][Password       ] */
+/*      Length: [1 Byte][4 Byte         ][Password length] */
+
+#define PASSWORD_HEADER_SIZE (sizeof(uint8_t) + sizeof(uint32_t))
+
+#define PASSWORD_REQUEST 0x41
+#define PASSWORD_ACCEPTED 0x42
+#define PASSWORD_DECLINED 0x43
+
+uint8_t ReceivePassword(Client *c, uint8_t **pw);
 
 // File transmition
 #define FILE_ALREADY_EXISTS 0x31

@@ -86,7 +86,7 @@ void ManageClient(int socket, Server *s)
             return;
         }
 
-        // Check if the client is already in the database^
+        // Check if the client is already in the database
         if(Client_In_Database(s, id) == 1)
         {
             // Create Client
@@ -102,6 +102,26 @@ void ManageClient(int socket, Server *s)
 
             // Create client directory if it does not exists -> The function will create a new directory if it doesnt already exist -> just to make sure
             Create_Client_Directory(s, c->directory);
+
+            if(SendBytes(c, NULL, 0, PASSWORD_REQUEST) == 0)
+            {
+                free(c);
+                return;
+            }
+
+            unsigned char *pw;
+            uint8_t token;
+
+            token = ReceivePassword(c, &pw);
+            if(token == ABORD || token == 0)
+            {
+                free(c);
+                return;
+            }
+
+            
+
+
         }
         else
         {
@@ -123,6 +143,8 @@ void ManageClient(int socket, Server *s)
                 return;
             }
         }
+
+
 
         // Start client thread
         c->Active = 1;

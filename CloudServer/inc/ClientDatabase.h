@@ -42,6 +42,8 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
 /* Should only be called from within the ClientDatabase.c */
 int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt);
 
+/* Check if a client has credentials */ 
+
 /* Get clients salt */
 unsigned char *Get_Client_Salt(Server *s, unsigned long id);
 

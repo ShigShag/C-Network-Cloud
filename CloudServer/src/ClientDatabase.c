@@ -1,6 +1,7 @@
 #include "../inc/ClientDatabase.h"
 #include "../inc/Misc.h"
 #include "../inc/Communication.h"
+#include <openssl/crypto.h>
 
 /* --------- client_database.txt --------- */
 
@@ -277,6 +278,7 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
     return salt;
 }
 
+/* FALSCH HIER WEITER MACHEN */
 /* Check password hash for a client id */
 int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
 {
@@ -303,14 +305,14 @@ int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
         Get_Client_Credentials(client_credentials, &id_, pw_, NULL);
 
         if(id_ == id){
-            equal = memcmp(pw, pw_, CLIENT_DATABASE_PASSWORD_SIZE);
+            equal = CRYPTO_memcmp(pw, pw_, CLIENT_DATABASE_PASSWORD_SIZE);
             break;
         }
     }
     free_memset(pw_, CLIENT_DATABASE_PASSWORD_SIZE);
     free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
     id_ = 0;
-
+    
     fclose(fp);
     return equal == 0;
 }

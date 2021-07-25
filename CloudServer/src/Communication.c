@@ -209,6 +209,63 @@ uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id)
     free(Buffer);
     return TotalBytesSend;
 }
+
+/* Password check */
+
+/* Password message structure */
+/* Description: [Token ][Password length][Password       ] */
+/*      Length: [1 Byte][4 Byte         ][Password length] */
+
+uint8_t ReceivePassword(Client *c, uint8_t **pw)
+{
+    if(c == NULL || pw == NULL) return 0;
+
+    uint8_t Token;
+    uint32_t BytesToBeReceived = PASSWORD_HEADER_SIZE;
+    uint64_t BytesReceived = 0;
+    uint64_t TotalBytesReceived = 0;
+
+    uint8_t *Buffer = (uint8_t *) malloc(PASSWORD_HEADER_SIZE * sizeof(uint8_t));
+    if(Buffer == NULL) return 0;
+
+    while(TotalBytesReceived < BytesToBeReceived)
+    {
+        BytesReceived += recv(c->socket, Buffer + TotalBytesReceived, BytesToBeReceived - TotalBytesReceived, 0);
+        if(BytesReceived <= 0)
+        {
+            free(Buffer);
+            return 0;
+        }
+        TotalBytesReceived += BytesReceived;
+    }    
+
+    Token = Buffer[0];
+    if(Token == ABORD)
+    {
+        free(Buffer);
+        return ABORD;
+    }
+    BytesToBeReceived = Uint8ToUint32(Buffer + 1);
+
+    free(Buffer);
+    *pw = (uint8_t *) malloc(BytesToBeReceived * sizeof (uint8_t));
+    if(Buffer == NULL) return 0;
+
+    TotalBytesReceived = 0;
+    while(TotalBytesReceived < BytesToBeReceived)
+    {
+        BytesReceived = recv(c->socket, (*pw) + TotalBytesReceived, BytesToBeReceived - TotalBytesReceived, 0);
+        if(BytesReceived <= 0)
+        {
+            free(Buffer);
+            return 0;
+        }
+        TotalBytesReceived += BytesReceived;        
+    }
+    return Token;
+}
+
+
 /* File transmition */
 
 uint8_t *GetFileHeader(uint64_t ByteArraySize)
