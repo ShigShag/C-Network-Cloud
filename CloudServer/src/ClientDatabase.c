@@ -1,6 +1,7 @@
 #include "../inc/ClientDatabase.h"
 #include "../inc/Misc.h"
 #include "../inc/Communication.h"
+#include "../inc/Crypto.h"
 #include <openssl/crypto.h>
 
 /* --------- client_database.txt --------- */
@@ -207,8 +208,8 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
 
     unsigned char *id_uint8 = Uint64ToUint8(id);
     memcpy(r, id_uint8, CLIENT_ID_SIZE * sizeof(unsigned char));
-    memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw, CLIENT_DATABASE_PASSWORD_SIZE * sizeof(unsigned char));
-    memcpy(r + ((CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_SIZE) * sizeof(unsigned char)), salt, CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
+    memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw, CLIENT_DATABASE_PASSWORD_HASH_SIZE * sizeof(unsigned char));
+    memcpy(r + ((CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE) * sizeof(unsigned char)), salt, CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
 
     free(id_uint8);
     *count = (CLIENT_DATABASE_TOTAL_ENTRY_SIZE) * sizeof(unsigned char);
@@ -217,13 +218,14 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
 
 /* Get clients credentials from formatted bytes */
 /* NOTE: THIS FUNCTION ASSUMES THAT pw AND salt ARE ALREADY ALLOCATED */
-int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt)
+//int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt)
+int Get_Client_Credentials(unsigned char *formatted, Database_Client *dc)
 {
     if(formatted == NULL) return 0;
 
-    if(id != NULL) *id  = Uint8ToUint64(formatted);
-    if(pw != NULL) memcpy(pw, formatted + CLIENT_ID_SIZE, CLIENT_DATABASE_PASSWORD_SIZE);
-    if(salt != NULL) memcpy(salt, formatted + CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_SIZE, CLIENT_DATABASE_SALT_SIZE);
+    dc->id = Uint8ToUint64(formatted);
+    memcpy(dc->pw_hash, formatted + CLIENT_ID_SIZE, CLIENT_DATABASE_PASSWORD_HASH_SIZE);
+    memcpy(dc->salt, formatted + CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE, CLIENT_DATABASE_SALT_SIZE);
     return 1;
 }
 
@@ -245,8 +247,15 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
         return NULL;
     }
 
+    Database_Client *dc = (Database_Client *) malloc(sizeof(Database_Client));
+    if(dc == NULL){
+        printf("[-] Could not allocate space for Database_Client in Get_Client_Salt: %s\n", strerror(errno));
+        free(salt);
+        free(client_credentials);
+        return NULL;
+    }
+
     unsigned long err = 1;
-    unsigned long id_;
     int success = 0;
 
     FILE *fp = fopen(s->config->client_credentials_path, "rb");
@@ -260,10 +269,11 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
         err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
         if(err == 0) continue;
 
-        Get_Client_Credentials(client_credentials, &id_, NULL, salt);
+        Get_Client_Credentials(client_credentials, dc);
 
-        if(id_ == id){
+        if(dc->id == id){
             success = 1;
+            memcpy(salt, dc->salt, CLIENT_DATABASE_SALT_SIZE);
             break;
         }
     }
@@ -274,15 +284,28 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
     }
 
     free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
+    free_memset(dc, sizeof(Database_Client));
 
     return salt;
 }
 
-/* FALSCH HIER WEITER MACHEN */
 /* Check password hash for a client id */
 int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
 {
     if(s == NULL || pw == NULL) return 0;
+
+    Database_Client *dc = (Database_Client *) malloc(sizeof(Database_Client));
+    if(dc == NULL){
+        printf("[-] Could not allocate space for Database_Client in Check_Client_Password: %s\n", strerror(errno));
+        return 0;
+    }
+
+    unsigned char *client_credentials = (unsigned char *) malloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * sizeof(unsigned char));
+    if(client_credentials == NULL){
+        printf("[-] Could not allocate space for client_credentials in Check_Client_Password: %s\n", strerror(errno));
+        free(dc);
+        return 0;
+    }
 
     FILE *fp = fopen(s->config->client_credentials_path, "rb");
     if(fp == NULL){
@@ -293,25 +316,25 @@ int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
     int equal = 1;
     unsigned long err = 1;
 
-    unsigned long id_ = 0;
-    unsigned char *pw_ = (unsigned char *) malloc(CLIENT_DATABASE_PASSWORD_SIZE * sizeof(unsigned char));
-    unsigned char *client_credentials = (unsigned char *) malloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * sizeof(unsigned char));
+    unsigned char *pw_hash;
 
     while(err != 0)
     {
         err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
         if(err == 0) continue;
 
-        Get_Client_Credentials(client_credentials, &id_, pw_, NULL);
+        Get_Client_Credentials(client_credentials, dc);
 
-        if(id_ == id){
-            equal = CRYPTO_memcmp(pw, pw_, CLIENT_DATABASE_PASSWORD_SIZE);
+        if(dc->id == id){
+            pw_hash = get_client_password_hash(pw, CLIENT_DATABASE_PASSWORD_HASH_SIZE, dc->salt);
+            if(pw_hash == NULL) break;
+        
+            equal = CRYPTO_memcmp(pw_hash, dc->pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE);
+            free(pw_hash);
             break;
         }
     }
-    free_memset(pw_, CLIENT_DATABASE_PASSWORD_SIZE);
     free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
-    id_ = 0;
     
     fclose(fp);
     return equal == 0;

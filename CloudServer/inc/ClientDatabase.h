@@ -5,9 +5,9 @@
 #include <openssl/sha.h>
 
 #define CLIENT_DATABASE_ID_SIZE sizeof(unsigned long)
-#define CLIENT_DATABASE_PASSWORD_SIZE SHA512_DIGEST_LENGTH 
+#define CLIENT_DATABASE_PASSWORD_HASH_SIZE SHA512_DIGEST_LENGTH 
 #define CLIENT_DATABASE_SALT_SIZE 16
-#define CLIENT_DATABASE_TOTAL_ENTRY_SIZE (CLIENT_DATABASE_ID_SIZE + CLIENT_DATABASE_PASSWORD_SIZE + CLIENT_DATABASE_SALT_SIZE)
+#define CLIENT_DATABASE_TOTAL_ENTRY_SIZE (CLIENT_DATABASE_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE + CLIENT_DATABASE_SALT_SIZE)
 
 /* --------- client_database.txt --------- */
 
@@ -29,8 +29,14 @@ int Create_Client_Directory(Server *s, unsigned long directory);
 
 /* --------- credentials.txt --------- */
 
-/* [CLIENT ID][CLIENT PW][CLIENT SALT] */
-/* [8 Byte   ][64 Byte  ][16 Bytes   ] */
+/* [CLIENT ID][CLIENT PW HASH][CLIENT SALT] */
+/* [8 Byte   ][64 Byte       ][16 Bytes   ] */
+
+typedef struct{
+    unsigned long id;
+    unsigned char pw_hash[CLIENT_DATABASE_PASSWORD_HASH_SIZE];
+    unsigned char salt[CLIENT_DATABASE_SALT_SIZE];
+} Database_Client;
 
 /* Add clients credentials to the database */
 int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsigned char *salt);
@@ -40,9 +46,9 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
 
 /* Get clients credentials from formatted bytes */
 /* Should only be called from within the ClientDatabase.c */
-int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt);
+//int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt);
+int Get_Client_Credentials(unsigned char *formatted, Database_Client *dc);
 
-/* Check if a client has credentials */ 
 
 /* Get clients salt */
 unsigned char *Get_Client_Salt(Server *s, unsigned long id);
