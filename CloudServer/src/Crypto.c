@@ -13,7 +13,7 @@ int get_random_unsigned_long(unsigned long *r)
 }
 
 /* Create new password hash */
-unsigned char *create_client_password_hash(unsigned char *pw, unsigned int pw_length, unsigned char **salt)
+unsigned char *create_client_password_hash(char *pw, unsigned int pw_length, unsigned char **salt)
 {
     if(pw == NULL || pw_length == 0 || salt == NULL) return NULL;
     
@@ -44,7 +44,7 @@ unsigned char *create_client_password_hash(unsigned char *pw, unsigned int pw_le
 }
 
 /* Get a password hash from an existing salt */
-unsigned char *get_client_password_hash(unsigned char *pw, unsigned int pw_length, unsigned char *salt)
+unsigned char *get_client_password_hash(char *pw, unsigned int pw_length, unsigned char *salt)
 {
     if(pw == NULL || pw_length == 0 || salt == NULL) return NULL;
 
@@ -54,7 +54,10 @@ unsigned char *get_client_password_hash(unsigned char *pw, unsigned int pw_lengt
         return NULL;
     }
 
-    if(PKCS5_PBKDF2_HMAC((const char *) pw, pw_length, *salt, CLIENT_DATABASE_SALT_SIZE, PBKDF2_ITERATIONS, EVP_sha512(), SHA512_DIGEST_LENGTH * sizeof(uint8_t), hash) == 0){
+    // Just to disable the compiler warning 
+    const unsigned char *const_salt = salt;
+
+    if(PKCS5_PBKDF2_HMAC((const char *) pw, pw_length, const_salt, CLIENT_DATABASE_SALT_SIZE, PBKDF2_ITERATIONS, EVP_sha512(), SHA512_DIGEST_LENGTH * sizeof(uint8_t), hash) == 0){
         free(hash);
         return NULL;
     }

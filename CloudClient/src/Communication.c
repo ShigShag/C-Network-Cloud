@@ -272,6 +272,53 @@ int32_t ReceiveInitialHandshake_t(client_t *c, uint8_t *token)
     free(Buffer);
     return 1;
 }
+
+/* Password message structure */
+/* Description: [Token ][Password length][Password       ] */
+/*      Length: [1 Byte][4 Byte         ][Password length] */
+
+uint32_t SendPassword(Client *c, int8_t *pw, uint32_t pw_length, uint8_t token)
+{
+    if(c == NULL || pw == NULL) return 0;
+
+    unsigned char *PwLengthUint8t;
+    uint32_t BytesSend = 0;
+    uint32_t TotalBytesSend = 0;
+    unsigned char *Header = (unsigned char *) malloc(PASSWORD_HEADER_SIZE);
+    if(Header == NULL) return 0;
+
+    Header[0] = token;
+    PwLengthUint8t = Uint32ToUint8(pw_length);
+    memcpy(Header + 1, PwLengthUint8t, sizeof(int32_t));
+
+    while (TotalBytesSend < PASSWORD_HEADER_SIZE)
+    {
+        BytesSend = send(c->socket, Header + TotalBytesSend, PASSWORD_HEADER_SIZE - TotalBytesSend, 0);
+        if (BytesSend <= 0)
+        {
+            printf("Send Header failed\n");
+            free(Header);
+            ReportDisconnect(c);
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
+    free(Header);
+    TotalBytesSend = 0;
+    while(TotalBytesSend < pw_length)
+    {
+        BytesSend = send(c->socket, pw + TotalBytesSend, pw_length - TotalBytesSend, 0);
+        if (BytesSend <= 0)
+        {
+            printf("Send Data failed\n");
+            free(Header);
+            ReportDisconnect(c);
+            return 0;
+        }
+        TotalBytesSend += BytesSend;
+    }
+    return TotalBytesSend + PASSWORD_HEADER_SIZE;
+}
 uint8_t *GetHandshakeHeader(uint8_t token, uint64_t id)
 {
     uint8_t *id_array;

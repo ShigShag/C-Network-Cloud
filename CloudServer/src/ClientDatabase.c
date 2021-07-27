@@ -3,6 +3,7 @@
 #include "../inc/Communication.h"
 #include "../inc/Crypto.h"
 #include <openssl/crypto.h>
+#include <openssl/rand.h>
 
 /* --------- client_database.txt --------- */
 
@@ -168,13 +169,15 @@ int Create_Client_Directory(Server *s, unsigned long directory)
 
 /* Add clients credentials to the database */
 /* Should only be called from within the ClientDatabase.c */
-int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsigned char *salt)
+int Add_Client_credentials(Server *s, unsigned long id, char *pw)
 {
-    if(s == NULL || pw == NULL || salt == NULL) return 0;
+    if(s == NULL || pw == NULL) return 0;
 
     FILE *fp;
     unsigned int count;
     unsigned char *formatted;
+    unsigned char *pw_hash;
+    unsigned char *salt;
     unsigned long bytes_written;
 
     fp = fopen(s->config->client_credentials_path, "ab");
@@ -183,21 +186,46 @@ int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsig
         return 0;
     }
 
-    formatted = Format_Client_Credentials(id, pw, salt, &count);
-    if(formatted == NULL){
+    salt = (unsigned char *) malloc(CLIENT_DATABASE_SALT_SIZE);
+    if(salt == NULL){
+        printf("[-] Failed to allocate memory for salt: %s\n", strerror(errno));
         fclose(fp);
         return 0;
     }
 
+    if(RAND_bytes(salt, CLIENT_DATABASE_SALT_SIZE) == 0){
+        fclose(fp);
+        free(salt);
+        return 0;
+    }
+
+    // Create password hash
+    pw_hash = get_client_password_hash(pw, strlen(pw), salt);
+    if(pw_hash == NULL){
+        fclose(fp);
+        return 0;
+    }
+
+    // Format data into one byte string
+    formatted = Format_Client_Credentials(id, pw_hash, salt, &count);
+    if(formatted == NULL){
+        fclose(fp);
+        free_memset(pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE);
+        return 0;
+    }
+
+    // Write byte string to the end of the file
     bytes_written = fwrite(formatted, sizeof(unsigned char), count, fp);
 
     free(formatted);
     fclose(fp);
+    free_memset(pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE);
+    free_memset(salt, CLIENT_DATABASE_SALT_SIZE);
     return bytes_written != 0;
 }   
-unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, unsigned char *salt, unsigned int *count)
+unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_hash, unsigned char *salt, unsigned int *count)
 {
-    if(pw == NULL || salt == NULL) return NULL;
+    if(pw_hash == NULL || salt == NULL) return NULL;
 
     unsigned char *r = (unsigned char *) calloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE, sizeof(unsigned char));
     if(r == NULL)
@@ -208,7 +236,7 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
 
     unsigned char *id_uint8 = Uint64ToUint8(id);
     memcpy(r, id_uint8, CLIENT_ID_SIZE * sizeof(unsigned char));
-    memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw, CLIENT_DATABASE_PASSWORD_HASH_SIZE * sizeof(unsigned char));
+    memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE * sizeof(unsigned char));
     memcpy(r + ((CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE) * sizeof(unsigned char)), salt, CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
 
     free(id_uint8);
@@ -218,7 +246,6 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, un
 
 /* Get clients credentials from formatted bytes */
 /* NOTE: THIS FUNCTION ASSUMES THAT pw AND salt ARE ALREADY ALLOCATED */
-//int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt)
 int Get_Client_Credentials(unsigned char *formatted, Database_Client *dc)
 {
     if(formatted == NULL) return 0;
@@ -290,7 +317,7 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
 }
 
 /* Check password hash for a client id */
-int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
+int Check_Client_Password(Server *s, unsigned long id, char *pw)
 {
     if(s == NULL || pw == NULL) return 0;
 
@@ -326,7 +353,7 @@ int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw)
         Get_Client_Credentials(client_credentials, dc);
 
         if(dc->id == id){
-            pw_hash = get_client_password_hash(pw, CLIENT_DATABASE_PASSWORD_HASH_SIZE, dc->salt);
+            pw_hash = get_client_password_hash(pw, strlen(pw), dc->salt);
             if(pw_hash == NULL) break;
         
             equal = CRYPTO_memcmp(pw_hash, dc->pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE);

@@ -39,23 +39,19 @@ typedef struct{
 } Database_Client;
 
 /* Add clients credentials to the database */
-int Add_Client_credentials(Server *s, unsigned long id, unsigned char *pw, unsigned char *salt);
+int Add_Client_credentials(Server *s, unsigned long id, char *pw);
 
 /* Get clients credentials formatted for the database */
-unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw, unsigned char *salt, unsigned int *count);
+unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_hash, unsigned char *salt, unsigned int *count);
 
 /* Get clients credentials from formatted bytes */
 /* Should only be called from within the ClientDatabase.c */
-//int Get_Client_Credentials(unsigned char *formatted, unsigned long *id, unsigned char *pw, unsigned char *salt);
 int Get_Client_Credentials(unsigned char *formatted, Database_Client *dc);
-
 
 /* Get clients salt */
 unsigned char *Get_Client_Salt(Server *s, unsigned long id);
 
 /* Check password hash for a client id */
-int Check_Client_Password(Server *s, unsigned long id, unsigned char *pw);
-
-
+int Check_Client_Password(Server *s, unsigned long id, char *pw);
 
 #endif

@@ -73,6 +73,23 @@ uint8_t *GetHandshakeHeader(uint8_t token, uint64_t id);
 int32_t ReceiveInitialHandshake(Client *c, uint8_t *token, uint64_t *id);
 int32_t ReceiveInitialHandshake_t(client_t *c, uint8_t *token);
 
+/* Password check */
+
+/* Password message structure */
+/* Description: [Token ][Password length][Password       ] */
+/*      Length: [1 Byte][4 Byte         ][Password length] */
+
+#define PASSWORD_HEADER_SIZE (sizeof(uint8_t) + sizeof(uint32_t))
+
+#define PASSWORD_REQUEST 0x41
+#define PASSWORD_NEW_REQUEST 0x42
+#define PASSWORD_DECLINED 0x43
+
+
+#define SendPasswordRequest(socket) SendBytesSocketOnly(socket, NULL, 0, PASSWORD_REQUEST) 
+#define SendNewPasswordRequest(socket) SendBytesSocketOnly(socket, NULL, 0, PASSWORD_NEW_REQUEST) 
+uint32_t SendPassword(Client *c, int8_t *pw, uint32_t pw_length, uint8_t token);
+
 // File transmition
 #define FILE_ALREADY_EXISTS 0x31
 #define FILE_DOES_NOT_EXIST 0x32

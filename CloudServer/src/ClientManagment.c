@@ -82,16 +82,47 @@ void ManageClient(int socket, Server *s)
     {
         // If Serer is full send SERVER_FULL token to client
         if(s->clients_connected >= s->max_clients){
-            SendInitialHandshake(socket, SERVER_FULL, id);
+            SendServerFull(socket);
             return;
         }
 
         // Check if the client is already in the database
         if(Client_In_Database(s, id) == 1)
         {
+            
+            // Send password request
+            if(SendPasswordRequest(socket) == 0) return;
+
+            int same;
+            int8_t *pw;
+            uint8_t token;
+
+            token = ReceivePassword(socket, &pw);
+            if(token != PASSWORD_REQUEST)
+            {
+                switch (token)
+                {
+                    case 0: return;
+                    default: 
+                        SendInitialHandshake(socket, PASSWORD_DECLINED, id); 
+                        break;
+                }
+            }
+
+            // Check if password was correct
+            same = Check_Client_Password(s, id, (char *) pw);
+            
+            // Delete password from memory
+            free_memset(pw, strlen((char *) pw));
+
+            if(same == 0)
+            {
+                SendInitialHandshake(socket, PASSWORD_DECLINED, id);
+                return;
+            }
+
             // Create Client
             c = CreateClient(s, socket, id);
-            /* Hier weiter machen */
             
             // If internal error occured
             if(c == NULL)
@@ -102,29 +133,26 @@ void ManageClient(int socket, Server *s)
 
             // Create client directory if it does not exists -> The function will create a new directory if it doesnt already exist -> just to make sure
             Create_Client_Directory(s, c->directory);
-
-            if(SendBytes(c, NULL, 0, PASSWORD_REQUEST) == 0)
-            {
-                free(c);
-                return;
-            }
-
-            unsigned char *pw;
-            uint8_t token;
-
-            token = ReceivePassword(c, &pw);
-            if(token == ABORD || token == 0)
-            {
-                free(c);
-                return;
-            }
-
-            
-
-
         }
         else
         {
+            if(SendNewPasswordRequest(socket) == 0) return;
+
+            int8_t *pw;
+            uint8_t token;
+
+            token = ReceivePassword(socket, &pw);
+            if(token != PASSWORD_NEW_REQUEST)
+            {
+                switch (token)
+                {
+                    case 0: return;
+                    default: 
+                        SendInitialHandshake(socket, PASSWORD_DECLINED, id); 
+                        break;
+                }            
+            }
+
             // Create new client with new id and directory
             c = CreateClient(s, socket, 0);
 
@@ -132,8 +160,19 @@ void ManageClient(int socket, Server *s)
             if(c == NULL)
             {
                 SendInitialHandshake(socket, ABORD, id);
+                free_memset(pw, strlen((char *) pw));
                 return;
             }
+
+            if(Add_Client_credentials(s, c->id, (char *) pw) == 0)
+            {
+                SendInitialHandshake(socket, PASSWORD_DECLINED, c->id);
+                free(c);
+                free_memset(pw, strlen((char *) pw));
+            }
+
+            // Delete password from memory
+            free_memset(pw, strlen((char *) pw));
 
             // Add new client to database and create a new cloud directory
             if(Add_Client_To_Database(s, c->id, c->directory) == 0)
@@ -143,8 +182,6 @@ void ManageClient(int socket, Server *s)
                 return;
             }
         }
-
-
 
         // Start client thread
         c->Active = 1;

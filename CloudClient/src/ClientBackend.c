@@ -159,6 +159,7 @@ int Initial_Handshake(Client *c)
     unsigned long id = Get_Client_Id(c);
     unsigned char token;
     unsigned long id_recv;
+    char pw[100];
 
     // If internal error occured
     if(id < 0)
@@ -174,6 +175,39 @@ int Initial_Handshake(Client *c)
         return 0;
     }
 
+    token = ReceiveBytes(c, NULL, NULL);
+
+    switch (token)
+    {
+    case SERVER_FULL:
+            printf("[-] Server is full\n");
+            return 0;
+
+    case PASSWORD_REQUEST:
+        printf("Enter password: ");
+        fgets(pw, sizeof(pw), stdin);
+        if(SendPassword(c, (int8_t *) pw, strlen(pw), PASSWORD_REQUEST) == 0)
+        {
+            printf("[-] Could not send password to server\n");
+            return 0;
+        }
+        break;
+    
+    case PASSWORD_NEW_REQUEST:
+        printf("Enter new password: ");
+        fgets(pw, sizeof(pw), stdin);
+        if(SendPassword(c, (int8_t *)pw, strlen(pw), PASSWORD_NEW_REQUEST) == 0)
+        {
+            printf("[-] Could not send new password to server\n");
+            return 0;
+        }
+        break;
+
+    default:
+        printf("[-] Received unidentified token from server\n");
+        return 0;
+    }
+
     if(ReceiveInitialHandshake(c, &token, &id_recv) == 0)
     {
         printf("[-] Could not receive handshake from server\n");
@@ -182,8 +216,8 @@ int Initial_Handshake(Client *c)
 
     switch (token)
     {
-    case SERVER_FULL:
-        printf("[-] Server is full\n");
+    case PASSWORD_DECLINED:
+        printf("[-] Wrong password\n");
         return 0;
     
     case ABORD:

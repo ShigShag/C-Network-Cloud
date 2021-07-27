@@ -31,6 +31,9 @@ uint32_t ProcessHeader(uint8_t *ByteArray, uint32_t ByteArraySize, int32_t *Toke
 uint32_t SendBytes(Client *c, uint8_t *ByteArray, uint32_t ByteArraySize, int32_t Token);
 uint64_t ReceiveBytes(Client *c, uint8_t **Destination, uint64_t *BytesReceived_);
 
+uint32_t SendBytesSocketOnly(int socket, uint8_t *ByteArray, uint32_t ByteArraySize, int32_t Token);
+uint64_t ReceiveBytesSocketOnly(int socket, uint8_t **Destination, uint64_t *BytesReceived_);
+
 /* Special communication */
 
 // Client first connection header
@@ -60,6 +63,8 @@ int32_t ReceiveInitialHeader(int socket, uint8_t *token, uint64_t *id);
 #define TEST_READY 0x24
 #define ABORD 0x25
 
+#define SendServerFull(socket) SendBytesSocketOnly(socket, NULL, 0, SERVER_FULL) 
+
 uint8_t *GetHandshakeHeader(uint8_t token, uint64_t id);
 uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id);
 
@@ -72,10 +77,13 @@ uint64_t SendInitialHandshake(int socket, uint8_t token, uint64_t id);
 #define PASSWORD_HEADER_SIZE (sizeof(uint8_t) + sizeof(uint32_t))
 
 #define PASSWORD_REQUEST 0x41
-#define PASSWORD_ACCEPTED 0x42
+#define PASSWORD_NEW_REQUEST 0x42
 #define PASSWORD_DECLINED 0x43
 
-uint8_t ReceivePassword(Client *c, uint8_t **pw);
+
+#define SendPasswordRequest(socket) SendBytesSocketOnly(socket, NULL, 0, PASSWORD_REQUEST) 
+#define SendNewPasswordRequest(socket) SendBytesSocketOnly(socket, NULL, 0, PASSWORD_NEW_REQUEST) 
+uint8_t ReceivePassword(int socket, int8_t **pw);
 
 // File transmition
 #define FILE_ALREADY_EXISTS 0x31
