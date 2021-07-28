@@ -230,3 +230,15 @@ void free_memset(void *buf, unsigned long count)
     memset(buf, 0, count);
     free(buf);
 }
+char ascii_to_hex(int num)
+{
+        if(num < 58 && num > 47)
+        {
+                return num - 48; 
+        }
+        if(num < 103 && num > 96)
+        {
+                return num - 87;
+        }
+        return (char) num;
+}

@@ -178,7 +178,6 @@ int Add_Client_credentials(Server *s, unsigned long id, char *pw)
     unsigned char *formatted;
     unsigned char *pw_hash;
     unsigned char *salt;
-    unsigned long bytes_written;
 
     fp = fopen(s->config->client_credentials_path, "ab");
     if(fp == NULL){
@@ -214,15 +213,29 @@ int Add_Client_credentials(Server *s, unsigned long id, char *pw)
         return 0;
     }
 
-    // Write byte string to the end of the file
-    bytes_written = fwrite(formatted, sizeof(unsigned char), count, fp);
+    // Write string in hex form to the end of the file
+    for(int i = 0;i < count;i++){
+        fprintf(fp, "%.2x", formatted[i]);
+    }
 
-    free(formatted);
+    /*int i = 0;
+    for(;i < CLIENT_DATABASE_ID_SIZE;i++) fprintf(fp, "%.2x", formatted[i]);
+    fprintf(fp, ":");
+    for(;i < (CLIENT_DATABASE_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE);i++) fprintf(fp, "%.2x", formatted[i]);
+    fprintf(fp, ":");
+    for(;i < (CLIENT_DATABASE_TOTAL_ENTRY_SIZE);i++) fprintf(fp, "%.2x", formatted[i]);*/
+
+    // Add a newline character
+    fprintf(fp, "\n");
+
+    //bytes_written = fwrite(formatted, sizeof(unsigned char), count, fp);
+
     fclose(fp);
+    free_memset(formatted, count);
     free_memset(pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE);
     free_memset(salt, CLIENT_DATABASE_SALT_SIZE);
-    return bytes_written != 0;
-}   
+    return 1;
+}
 unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_hash, unsigned char *salt, unsigned int *count)
 {
     if(pw_hash == NULL || salt == NULL) return NULL;
@@ -235,24 +248,69 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_has
     }
 
     unsigned char *id_uint8 = Uint64ToUint8(id);
+    printf("Id save: ");
+    for(int i = 0;i< 8;i++) printf("%.2x", id_uint8[i]);
+    printf("\n");
     memcpy(r, id_uint8, CLIENT_ID_SIZE * sizeof(unsigned char));
     memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE * sizeof(unsigned char));
     memcpy(r + ((CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE) * sizeof(unsigned char)), salt, CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
+
+    printf("pw_hash save: ");
+    for(int i = 0;i< CLIENT_DATABASE_PASSWORD_HASH_SIZE;i++) printf("%.2x", pw_hash[i]);
+    printf("\n");
+
+    printf("Salt safe: ");
+    for(int i = 0;i< CLIENT_DATABASE_SALT_SIZE;i++) printf("%.2x", pw_hash[i]);
+    printf("\n");
 
     free(id_uint8);
     *count = (CLIENT_DATABASE_TOTAL_ENTRY_SIZE) * sizeof(unsigned char);
     return r;
 }
 
-/* Get clients credentials from formatted bytes */
-/* NOTE: THIS FUNCTION ASSUMES THAT pw AND salt ARE ALREADY ALLOCATED */
-int Get_Client_Credentials(unsigned char *formatted, Database_Client *dc)
+/* Get clients credentials from ascii formatted string */
+int Get_Client_Credentials(char *formatted, Database_Client *dc)
 {
     if(formatted == NULL) return 0;
 
-    dc->id = Uint8ToUint64(formatted);
-    memcpy(dc->pw_hash, formatted + CLIENT_ID_SIZE, CLIENT_DATABASE_PASSWORD_HASH_SIZE);
-    memcpy(dc->salt, formatted + CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE, CLIENT_DATABASE_SALT_SIZE);
+    unsigned char id_[CLIENT_ID_SIZE];
+
+    unsigned char c1, c2;
+
+    // Convert id
+    for(int i = 0, n = 0;n < CLIENT_ID_SIZE;i+=2,n++){
+        c1 = ascii_to_hex(formatted[i]);
+        c2 = ascii_to_hex(formatted[i + 1]); 
+        id_[n] = c1 << 4 | c2;
+    }
+    dc->id = Uint8ToUint64(id_);
+    
+    // Convert password
+    for(int i = CLIENT_ID_SIZE * 2, n = 0;n < CLIENT_DATABASE_PASSWORD_HASH_SIZE;i+=2, n++){
+        c1 = ascii_to_hex(formatted[i]);
+        c2 = ascii_to_hex(formatted[i + 1]);
+        dc->pw_hash[n] = c1 << 4 | c2;
+    }
+    
+    // Convert salt
+    for(int i = (CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE) * 2, n = 0;n < CLIENT_DATABASE_SALT_SIZE;i+=2, n++){
+        c1 = ascii_to_hex(formatted[i]);
+        c2 = ascii_to_hex(formatted[i + 1]);
+        dc->salt[n] = c1 << 4 | c2;
+    }
+
+    printf("ID read: ");
+    for(int i = 0;i< 8;i++) printf("%.2x", id_[i]); 
+
+    printf("\n");
+    printf("Password hash read: ");
+    for(int i = 0;i< CLIENT_DATABASE_PASSWORD_HASH_SIZE;i++) printf("%.2x", dc->pw_hash[i]);
+    printf("\n");
+
+    printf("salt read: ");
+    for(int i = 0;i< CLIENT_DATABASE_SALT_SIZE;i++) printf("%.2x", dc->salt[i]);
+    printf("\n");   
+
     return 1;
 }
 
@@ -266,37 +324,31 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
         printf("[-] Could not allocate space for salt in Get_Client_Salt: %s\n", strerror(errno));
         return NULL;
     }
-    
-    unsigned char *client_credentials = (unsigned char *) malloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * sizeof(unsigned char));
-    if(client_credentials == NULL){
-        printf("[-] Could not allocate space for client_credentials in Get_Client_Salt: %s\n", strerror(errno));
-        free(salt);
-        return NULL;
-    }
 
     Database_Client *dc = (Database_Client *) malloc(sizeof(Database_Client));
     if(dc == NULL){
         printf("[-] Could not allocate space for Database_Client in Get_Client_Salt: %s\n", strerror(errno));
         free(salt);
-        free(client_credentials);
         return NULL;
     }
 
-    unsigned long err = 1;
     int success = 0;
+    char line[(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * 2) + 10];
 
-    FILE *fp = fopen(s->config->client_credentials_path, "rb");
+    FILE *fp = fopen(s->config->client_credentials_path, "r");
     if(fp == NULL){
         printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
         return 0;
     }
 
-    while(err != 0)
+    // Skip first line
+    fgets(line, sizeof(line), fp);
+    while(fgets(line, sizeof(line),fp) != NULL)
     {
-        err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
-        if(err == 0) continue;
+        //err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
+        //if(err == 0) continue;
 
-        Get_Client_Credentials(client_credentials, dc);
+        Get_Client_Credentials(line, dc);
 
         if(dc->id == id){
             success = 1;
@@ -310,8 +362,8 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
         salt = NULL;
     }
 
-    free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
     free_memset(dc, sizeof(Database_Client));
+    memset(line, 0, sizeof(line));
 
     return salt;
 }
@@ -327,13 +379,6 @@ int Check_Client_Password(Server *s, unsigned long id, char *pw)
         return 0;
     }
 
-    unsigned char *client_credentials = (unsigned char *) malloc(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * sizeof(unsigned char));
-    if(client_credentials == NULL){
-        printf("[-] Could not allocate space for client_credentials in Check_Client_Password: %s\n", strerror(errno));
-        free(dc);
-        return 0;
-    }
-
     FILE *fp = fopen(s->config->client_credentials_path, "rb");
     if(fp == NULL){
         printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
@@ -341,16 +386,19 @@ int Check_Client_Password(Server *s, unsigned long id, char *pw)
     }
 
     int equal = 1;
-    unsigned long err = 1;
 
     unsigned char *pw_hash;
+    char line[(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * 2) + 10];
 
-    while(err != 0)
+    // Skip first line
+    fgets(line, sizeof(line), fp);
+    while(fgets(line, sizeof(line), fp))
     {
-        err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
-        if(err == 0) continue;
-
-        Get_Client_Credentials(client_credentials, dc);
+        //err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
+        //if(err == 0) continue;
+        printf("[%s]\n", line);
+        Get_Client_Credentials(line, dc);
+        printf("Id: %lu\n", dc->id);
 
         if(dc->id == id){
             pw_hash = get_client_password_hash(pw, strlen(pw), dc->salt);
@@ -361,8 +409,9 @@ int Check_Client_Password(Server *s, unsigned long id, char *pw)
             break;
         }
     }
-    free_memset(client_credentials, CLIENT_DATABASE_TOTAL_ENTRY_SIZE);
     
+    free_memset(dc, sizeof(Database_Client));
+    memset(line, 0, sizeof(line));
     fclose(fp);
     return equal == 0;
 }
