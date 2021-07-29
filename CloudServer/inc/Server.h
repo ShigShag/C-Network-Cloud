@@ -3,6 +3,7 @@
 
 #include "Client.h"
 #include "Config.h"
+#include "Logging.h"
 
 typedef struct
 {
@@ -29,6 +30,9 @@ typedef struct
 
     /* Client list */
     Client **CLIENT;
+
+    /* Logger */
+    Log *log;
 
 } Server;
 

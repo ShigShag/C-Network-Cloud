@@ -2,6 +2,7 @@
 #include "../inc/Communication.h"
 #include "../inc/Misc.h"
 #include "../inc/Crypto.h"
+#include "../inc/Logging.h"
 
 /* Listening */
 // Listens for new client and passes them to the manage function
@@ -14,9 +15,9 @@ void *ClientListeningThread(void *server)
     Server *s = (Server *) server;
     int s_client;
 
-    if(!listen(s->Socket, s->max_clients))
+    if(listen(s->Socket, s->max_clients) == 0)
     {
-        printf("[+] Listening on port:[%d]\n", s->port);
+        WriteLog(s->log, 1, LOG_SUCCESS, "Listening on port:[%d]", s->port);
 
         while(s->Activated)
         {
@@ -28,7 +29,7 @@ void *ClientListeningThread(void *server)
     }
     else
     {
-        printf("[-] Start listening failed: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Start listening failed: [%s]", strerror(errno));
     }
     return 0;
 }
@@ -41,7 +42,8 @@ void *ClientListMonitor(void *server)
 
     Server *s = (Server *) server;
 
-    printf("[+] Started client monitor\n");
+    WriteLog(s->log, 1, LOG_SUCCESS, "Started client monitor", strerror(errno));
+
 
     while(s->Activated)
     {
@@ -73,7 +75,7 @@ void ManageClient(int socket, Server *s)
     // Receive initial message from client
     if(ReceiveInitialHeader(socket, &token, &id) == 0)
     {
-        printf("[-] Could not receive initial header from Client with socket: %u\n", socket);
+        WriteLog(s->log, 1, LOG_FAIL, "Could not receive initial header from Client with socket: %u", socket);
         return;
     }
 
@@ -191,7 +193,7 @@ void ManageClient(int socket, Server *s)
         if(err != 0)
         {
             SendInitialHandshake(socket, ABORD, id);
-            printf("[-] Could not start client thread: %s\n", strerror(err));
+            WriteLog(s->log, 1, LOG_FAIL, "Could not start client thread: %s", strerror(err));
             free(c);
             return;
         }
@@ -201,7 +203,7 @@ void ManageClient(int socket, Server *s)
         s->CLIENT[s->clients_connected] = c;
         s->clients_connected ++;
         Unlock_Client_Count(s);
-        printf("[!] New client with id: %lu\n", c->id);
+        WriteLog(s->log, 1, LOG_NOTICE, "New client with id: [%lu]:[%s]:[%d]", c->id, c->ip, c->port);
 
         // Send ok and id & check for fail
         if(SendInitialHandshake(c->socket, ALL_OK, c->id) == 0)
@@ -224,7 +226,6 @@ void ManageClient(int socket, Server *s)
         }
         Unlock_Client_Count(s);
     }
-
 }
 
 // Creates a client
@@ -232,12 +233,10 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
 {
     if(s == NULL)
     {
-        printf("[-] Server *s was null when trying to add client\n");
         return NULL;
     }
     if(socket == -1)
     {
-        printf("[-] Tried to add INVALID_SOCKET Object or Server *s was NULL\n");
         return NULL;
     }
 
@@ -245,7 +244,7 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
     Client *client = (Client *) malloc(sizeof(Client));
     if(client == NULL)
     {
-        printf("[-] Could not allocate Memory for Client in CreateClient() %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not allocate Memory for Client in CreateClient() %s", strerror(errno));
         return NULL;
     }
 
@@ -353,7 +352,7 @@ void RemoveClient(Server *s, int index)
         s->CLIENT[i] = s->CLIENT[i + 1];
     }
     s->clients_connected --;
-    printf("[!] Removed client with id: %lu\n", id);  
+    WriteLog(s->log, 1, LOG_NOTICE, "Removed client with id: %lu", id);
 }
 // Removes all clients by calling RemoveClient() until client list is empty
 void RemoveAllClients(Server *s)
@@ -363,7 +362,7 @@ void RemoveAllClients(Server *s)
     {
         RemoveClient(s, s->clients_connected - 1);
     }
-    printf("[!] Removed all clients\n");
+    WriteLog(s->log, 1, LOG_NOTICE, "Removed all clients");
 }
 // Sets a client to inactiv
 void ReportDisconnect(Client *client)

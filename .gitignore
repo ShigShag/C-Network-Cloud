@@ -6,6 +6,7 @@ CloudServer/bin/
 CloudServer/obj/
 CloudServer/.vscode/
 CloudServer/cloud/
+CloudServer/Log/
 Test.c
 names.txt
 output.txt

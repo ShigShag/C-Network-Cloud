@@ -3,6 +3,7 @@
 #include "../inc/Communication.h"
 #include "../inc/Misc.h"
 #include "../inc/ClientManagment.h"
+#include "../inc/Logging.h"
 
 Server *Create_Server(char *config_file_path)
 {
@@ -10,6 +11,7 @@ Server *Create_Server(char *config_file_path)
     if(s == NULL) 
     {
         printf("[-] Failed to Allocate Sapce for Server: %s\n", strerror(errno));
+        
         return NULL;
     }
 
@@ -38,11 +40,13 @@ Server *Create_Server(char *config_file_path)
     s->port = s->config->port;
     s->Client_Lock = 0;
 
+    s->log = CreateLogger(s->config->server_log_path);
+
     // Create Cloud Folder if not exists
     mkdir(s->config->cloud_directory, 0744);
 
-    printf("[+] Address set\n");
-
+    WriteLog(s->log, 1, LOG_SUCCESS, "Address set");
+    
     return s;
 }
 int Create_Socket(Server *s, int receive_timeout_sec)
@@ -53,7 +57,7 @@ int Create_Socket(Server *s, int receive_timeout_sec)
 
     if((s->Socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
-        printf("[-] Could not create Socket: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not create Socket: %s", strerror(errno));
         return 0;
     }
     setsockopt(s->Socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
@@ -65,22 +69,23 @@ int Create_Socket(Server *s, int receive_timeout_sec)
         err = setsockopt(s->Socket, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof(tv));
         if(err != 0)
         {
-            printf("[-] Could not set receive timeout: %s\n", strerror(errno));
+            WriteLog(s->log, 1, LOG_FAIL, "Could not set receive timeout: %s", strerror(errno));
         }else
         {
-            printf("[+] Timeout set to %d seconds\n", receive_timeout_sec);
+            WriteLog(s->log, 1, LOG_FAIL, "Timeout set to %d seconds", receive_timeout_sec);
         }
     }
 
-    printf("[+] Created socket\n");
+    WriteLog(s->log, 1, LOG_SUCCESS, "Created socket");
+
 
     if(bind(s->Socket, (struct sockaddr*) &s->addr, sizeof(s->addr)) == -1)
     {
-        printf("[-] Could not bind Socket: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "[-] Could not bind Socket: %s", strerror(errno));
         return 0;
     }
 
-    printf("[+] Binded socket\n");
+    WriteLog(s->log, 1, LOG_SUCCESS, "Binded socket");
     return 1;
 }
 int StartServer(Server *s)
@@ -91,13 +96,7 @@ int StartServer(Server *s)
         return 0;
     }
     
-    if(!Create_Socket(s, s->config->receive_timeout))
-    {
-        printf("[-] Failed to create socket\n");
-        return 0;
-    }
-
-    srand(time(NULL));
+    if(!Create_Socket(s, s->config->receive_timeout)) return 0;
 
     int err;
     s->Activated = 1;
@@ -107,6 +106,7 @@ int StartServer(Server *s)
     {
         s->Activated = 0;
         printf("[-] Could not start listening thread: %s\n", strerror(err));
+        WriteLog(s->log, 1, LOG_FAIL, )
     }
 
     err = pthread_create(&s->ClientMonitorThread, NULL, &ClientListMonitor, s);

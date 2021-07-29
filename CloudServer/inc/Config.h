@@ -19,6 +19,9 @@ typedef struct
 
     /* Client credentials path */
     char *client_credentials_path;
+
+    /* Server log path */
+    char *server_log_path;
 } Config;
 
 Config *Get_Config(char *f_name);
