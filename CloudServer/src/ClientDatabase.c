@@ -255,13 +255,15 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_has
     memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE * sizeof(unsigned char));
     memcpy(r + ((CLIENT_ID_SIZE + CLIENT_DATABASE_PASSWORD_HASH_SIZE) * sizeof(unsigned char)), salt, CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
 
+    // Debug
+    /*
     printf("pw_hash save: ");
     for(int i = 0;i< CLIENT_DATABASE_PASSWORD_HASH_SIZE;i++) printf("%.2x", pw_hash[i]);
     printf("\n");
 
     printf("Salt safe: ");
     for(int i = 0;i< CLIENT_DATABASE_SALT_SIZE;i++) printf("%.2x", pw_hash[i]);
-    printf("\n");
+    printf("\n");*/
 
     free(id_uint8);
     *count = (CLIENT_DATABASE_TOTAL_ENTRY_SIZE) * sizeof(unsigned char);
@@ -299,7 +301,8 @@ int Get_Client_Credentials(char *formatted, Database_Client *dc)
         dc->salt[n] = c1 << 4 | c2;
     }
 
-    printf("ID read: ");
+    // Debug
+    /*printf("ID read: ");
     for(int i = 0;i< 8;i++) printf("%.2x", id_[i]); 
 
     printf("\n");
@@ -309,7 +312,7 @@ int Get_Client_Credentials(char *formatted, Database_Client *dc)
 
     printf("salt read: ");
     for(int i = 0;i< CLIENT_DATABASE_SALT_SIZE;i++) printf("%.2x", dc->salt[i]);
-    printf("\n");   
+    printf("\n"); */  
 
     return 1;
 }
@@ -345,9 +348,6 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
     fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line),fp) != NULL)
     {
-        //err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
-        //if(err == 0) continue;
-
         Get_Client_Credentials(line, dc);
 
         if(dc->id == id){
@@ -394,11 +394,7 @@ int Check_Client_Password(Server *s, unsigned long id, char *pw)
     fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line), fp))
     {
-        //err = fread(client_credentials, sizeof(unsigned char), CLIENT_DATABASE_TOTAL_ENTRY_SIZE, fp);
-        //if(err == 0) continue;
-        printf("[%s]\n", line);
         Get_Client_Credentials(line, dc);
-        printf("Id: %lu\n", dc->id);
 
         if(dc->id == id){
             pw_hash = get_client_password_hash(pw, strlen(pw), dc->salt);

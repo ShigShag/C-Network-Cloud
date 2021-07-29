@@ -242,3 +242,14 @@ char ascii_to_hex(int num)
         }
         return (char) num;
 }
+void printclientip(int socket)
+{
+    struct sockaddr_in client_addr;
+    socklen_t AddressLength = sizeof(struct sockaddr_in);
+    getpeername(socket, (struct sockaddr *) &client_addr, &AddressLength);
+    
+    char *ip = inet_ntoa(client_addr.sin_addr);
+    uint16_t port = ntohs(client_addr.sin_port);
+
+    printf("[!] New potential client [%s]:[%d]\n", ip, port);
+}

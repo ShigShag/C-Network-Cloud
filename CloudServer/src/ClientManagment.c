@@ -77,6 +77,8 @@ void ManageClient(int socket, Server *s)
         return;
     }
 
+    printclientip(socket);
+
     // If client is regular
     if(token == NORMAL_MODE)
     {
@@ -89,7 +91,6 @@ void ManageClient(int socket, Server *s)
         // Check if the client is already in the database
         if(Client_In_Database(s, id) == 1)
         {
-            
             // Send password request
             if(SendPasswordRequest(socket) == 0) return;
 
