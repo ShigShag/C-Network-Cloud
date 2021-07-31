@@ -10,8 +10,7 @@ Server *Create_Server(char *config_file_path)
     Server *s = malloc(sizeof(Server));
     if(s == NULL) 
     {
-        printf("[-] Failed to Allocate Sapce for Server: %s\n", strerror(errno));
-        
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to Allocate Sapce for Server: %s", strerror(errno));
         return NULL;
     }
 
@@ -25,7 +24,7 @@ Server *Create_Server(char *config_file_path)
     s->CLIENT = (Client **) malloc(s->config->max_clients * sizeof(Client));
     if(s->CLIENT == NULL)
     {
-        printf("[-] Failed to Allocate Sapce for Client: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to Allocate Sapce for Client: %s", strerror(errno));
         free(s);
         return NULL;
     }
@@ -90,8 +89,7 @@ int Create_Socket(Server *s, int receive_timeout_sec)
 }
 int StartServer(Server *s)
 {
-    if(s == NULL)
-    {
+    if(s == NULL){
         printf("[-] Server was NULL\n");
         return 0;
     }
@@ -102,21 +100,18 @@ int StartServer(Server *s)
     s->Activated = 1;
 
     err = pthread_create(&s->ListeningThread, NULL, &ClientListeningThread, s);
-    if(err != 0)
-    {
+    if(err != 0){
         s->Activated = 0;
-        printf("[-] Could not start listening thread: %s\n", strerror(err));
-        WriteLog(s->log, 1, LOG_FAIL, )
+        WriteLog(s->log, 1, LOG_FAIL, "Could not start listening thread: %s", strerror(err));
     }
 
     err = pthread_create(&s->ClientMonitorThread, NULL, &ClientListMonitor, s);
-    if(err != 0)
-    {
+    if(err != 0){
         s->Activated = 0;
-        printf("[-] Could not start client monitor thread: %s\n", strerror(err));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not start client monitor thread: %s", strerror(err));
     }
 
-    printf("[!] MAX_CLIENTS: %d\n", s->config->max_clients);
+    WriteLog(s->log, 1, LOG_NOTICE, "MAX_CLIENTS: %d", s->config->max_clients);
 
     if(!s->Activated)
     {
@@ -144,5 +139,5 @@ void DeleteServer(Server *s)
     if(w == WAIT_TIMEOUT) TerminateThread(s->h_ListeningThread, 0);*/
     close(s->Socket);
     free(s->CLIENT);
-    printf("[+] CleanUp\n");
+    WriteLog(s->log, 1, LOG_NOTICE, "Cleanup");
 }

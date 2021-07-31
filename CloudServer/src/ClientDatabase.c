@@ -2,6 +2,7 @@
 #include "../inc/Misc.h"
 #include "../inc/Communication.h"
 #include "../inc/Crypto.h"
+#include "../inc/Logging.h"
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 
@@ -19,7 +20,7 @@ int Client_In_Database(Server *s, unsigned long id_)
     fp = fopen(s->config->client_database_path, "rb");
     if(fp == NULL)
     {
-        printf("[-] Failed to access %s: %s\n",s->config->client_database_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_database_path, strerror(errno));
         return 0;
     }
 
@@ -48,7 +49,7 @@ int Directory_In_Database(Server *s, unsigned long directory_)
     fp = fopen(s->config->client_database_path, "rb");
     if(fp == NULL)
     {
-        printf("[-] Failed to access %s: %s\n",s->config->client_database_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_database_path, strerror(errno));
         return 0;
     }
 
@@ -77,7 +78,7 @@ char *Get_Client_Directory_Char(Server *s, unsigned long id_)
     fp = fopen(s->config->client_database_path, "r");
     if(fp == NULL)
     {
-        printf("[-] Failed to access %s: %s\n",s->config->client_database_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_database_path, strerror(errno));
         return 0;
     }
 
@@ -90,7 +91,7 @@ char *Get_Client_Directory_Char(Server *s, unsigned long id_)
             return_directroy = (char *) malloc((NAME_MAX + 1) * sizeof(char));
             if(return_directroy == NULL)
             {
-                printf("[-] Failed to allocate space for return_directroy: %s\n", strerror(errno));
+                WriteLog(s->log, 1, LOG_FAIL, "Failed to allocate space for return_directroy: %s", strerror(errno));
                 return NULL;
             }
             snprintf(return_directroy, (NAME_MAX + 1) * sizeof(char), "%lu", directory);
@@ -110,7 +111,7 @@ unsigned long Get_Client_Directory(Server *s, unsigned long id_)
     fp = fopen(s->config->client_database_path, "r");
     if(fp == NULL)
     {
-        printf("[-] Failed to access %s: %s\n",s->config->client_database_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_database_path, strerror(errno));
         return 0;
     }
 
@@ -137,7 +138,7 @@ int Add_Client_To_Database(Server *s, unsigned long id, unsigned long directory)
     fp = fopen(s->config->client_database_path, "a");
     if(fp == NULL)
     {
-        printf("[-] Failed to access %s: %s\n",s->config->client_database_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_database_path, strerror(errno));
         return 0;
     }
     err = fprintf(fp, "%lu %lu\n", id, directory);
@@ -156,7 +157,7 @@ int Create_Client_Directory(Server *s, unsigned long directory)
     char *dir = append_malloc(s->config->cloud_directory, temp);
     if(dir == NULL)
     {
-        printf("[-] Could not allocate space for append dir in add_client_to_database: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_database_path, strerror(errno));
         return 0;    
     }
 
@@ -181,13 +182,13 @@ int Add_Client_credentials(Server *s, unsigned long id, char *pw)
 
     fp = fopen(s->config->client_credentials_path, "ab");
     if(fp == NULL){
-        printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_credentials_path, strerror(errno));
         return 0;
     }
 
     salt = (unsigned char *) malloc(CLIENT_DATABASE_SALT_SIZE);
     if(salt == NULL){
-        printf("[-] Failed to allocate memory for salt: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to allocate memory for salt: %s", strerror(errno));
         fclose(fp);
         return 0;
     }
@@ -248,7 +249,7 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_has
     }
 
     unsigned char *id_uint8 = Uint64ToUint8(id);
-    printf("Id save: ");
+    //printf("Id save: ");
     for(int i = 0;i< 8;i++) printf("%.2x", id_uint8[i]);
     printf("\n");
     memcpy(r, id_uint8, CLIENT_ID_SIZE * sizeof(unsigned char));
@@ -324,13 +325,13 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
 
     unsigned char *salt = (unsigned char *) malloc(CLIENT_DATABASE_SALT_SIZE * sizeof(unsigned char));
     if(salt == NULL){
-        printf("[-] Could not allocate space for salt in Get_Client_Salt: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not allocate space for salt in Get_Client_Salt: %s", strerror(errno));
         return NULL;
     }
 
     Database_Client *dc = (Database_Client *) malloc(sizeof(Database_Client));
     if(dc == NULL){
-        printf("[-] Could not allocate space for Database_Client in Get_Client_Salt: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not allocate space for Database_Client in Get_Client_Salt: %s", strerror(errno));
         free(salt);
         return NULL;
     }
@@ -340,7 +341,7 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
 
     FILE *fp = fopen(s->config->client_credentials_path, "r");
     if(fp == NULL){
-        printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_credentials_path, strerror(errno));
         return 0;
     }
 
@@ -375,13 +376,13 @@ int Check_Client_Password(Server *s, unsigned long id, char *pw)
 
     Database_Client *dc = (Database_Client *) malloc(sizeof(Database_Client));
     if(dc == NULL){
-        printf("[-] Could not allocate space for Database_Client in Check_Client_Password: %s\n", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not allocate space for Database_Client in Check_Client_Password: %s", strerror(errno));
         return 0;
     }
 
     FILE *fp = fopen(s->config->client_credentials_path, "rb");
     if(fp == NULL){
-        printf("[-] Failed to access %s: %s\n",s->config->client_credentials_path, strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Failed to access %s: %s",s->config->client_credentials_path, strerror(errno));
         return 0;
     }
 
