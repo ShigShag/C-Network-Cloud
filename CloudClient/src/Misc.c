@@ -1,5 +1,6 @@
 #include "../inc/Misc.h"
 #include "../inc/ClientBackend.h"
+#include <termios.h>
 
 void PrintHelp(char *p_name)
 {
@@ -44,4 +45,36 @@ unsigned long Write_File(char *path, unsigned char *buffer, unsigned long size)
 
     fclose(fp);
     return bytes_written;
+}
+char *RetrievePassword(unsigned int max_size, unsigned int *count){
+   if(max_size == 0) return NULL;
+
+   char *pw = malloc(max_size * sizeof(char));
+   if(pw == NULL) return NULL;
+
+   struct termios term;
+
+   // Get configuration
+   tcgetattr(fileno(stdin), &term);
+   term.c_lflag &= ~ECHO;
+
+   // Set new configuration
+   tcsetattr(fileno(stdin), 0, &term);
+
+   fgets(pw, max_size * sizeof(char), stdin);
+
+   // Reset configuration
+   term.c_lflag |= ECHO;
+   tcsetattr(fileno(stdin), 0, &term);
+
+   *count = strlen(pw);
+
+   return pw;
+}
+void FreePassword(char *password, unsigned int *count)
+{
+    if(password == NULL || count == NULL) return;
+    memset(password, 0, *count);
+    free(password);
+    *count = 0;
 }

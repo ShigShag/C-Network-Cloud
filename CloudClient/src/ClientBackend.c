@@ -158,8 +158,9 @@ int Initial_Handshake(Client *c)
 
     unsigned long id = Get_Client_Id(c);
     unsigned char token;
+    char *pw;
     unsigned long id_recv;
-    char pw[100];
+    unsigned int pw_count;
 
     // If internal error occured
     if(id < 0)
@@ -185,22 +186,26 @@ int Initial_Handshake(Client *c)
 
     case PASSWORD_REQUEST:
         printf("Enter password: ");
-        fgets(pw, sizeof(pw), stdin);
-        if(SendPassword(c, (int8_t *) pw, strlen(pw), PASSWORD_REQUEST) == 0)
+        pw = RetrievePassword(MAX_PASSWORD_SIZE, &pw_count);
+        if(SendPassword(c, (int8_t *) pw, pw_count, PASSWORD_REQUEST) == 0)
         {
             printf("[-] Could not send password to server\n");
             return 0;
         }
+        FreePassword(pw, &pw_count);
+        printf("\n");
         break;
     
     case PASSWORD_NEW_REQUEST:
         printf("Enter new password: ");
-        fgets(pw, sizeof(pw), stdin);
-        if(SendPassword(c, (int8_t *)pw, strlen(pw), PASSWORD_NEW_REQUEST) == 0)
+        pw = RetrievePassword(MAX_PASSWORD_SIZE, &pw_count);
+        if(SendPassword(c, (int8_t *)pw, pw_count, PASSWORD_NEW_REQUEST) == 0)
         {
             printf("[-] Could not send new password to server\n");
             return 0;
         }
+        FreePassword(pw, &pw_count);
+        printf("\n");
         break;
 
     default:

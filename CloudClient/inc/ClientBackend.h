@@ -8,6 +8,8 @@
 #define INVALID_SOCKET (-1)
 #define SOCKET_ERROR (-1)
 
+#define MAX_PASSWORD_SIZE 32
+
 typedef struct
 {
     /* Socket */

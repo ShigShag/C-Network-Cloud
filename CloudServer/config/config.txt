@@ -1,5 +1,5 @@
 port 8080
-receive_timeout 0
+receive_timeout 10
 mode 1
 max_clients 500
 cloud_directory cloud/

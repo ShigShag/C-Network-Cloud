@@ -352,7 +352,7 @@ void RemoveClient(Server *s, int index)
         s->CLIENT[i] = s->CLIENT[i + 1];
     }
     s->clients_connected --;
-    WriteLog(s->log, 1, LOG_NOTICE, "Removed client with id: %lu", id);
+    WriteLog(s->log, 1, LOG_NOTICE, "Removed client with id: [%lu]", id);
 }
 // Removes all clients by calling RemoveClient() until client list is empty
 void RemoveAllClients(Server *s)
