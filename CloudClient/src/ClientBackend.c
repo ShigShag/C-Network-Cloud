@@ -599,15 +599,8 @@ void Pull_File(Client *c, Interface *i)
     clock_t begin, end;
     double total_time;
 
-    file_name = i->args[1];
+    file_name = basename(i->args[1]);
     destination_path = i->args[2];
-
-    fp = fopen(destination_path, "wb");
-    if(fp == NULL)
-    {
-        Error_Interface(i, "Could not open destination file");
-        return;
-    }
 
     if(SendBytes(c, (uint8_t *) file_name, strlen(file_name) + 1, PULL_FILE) == 0)
     {
@@ -632,6 +625,12 @@ void Pull_File(Client *c, Interface *i)
             break;
         } 
         return;     
+    }
+
+    fp = fopen(destination_path, "wb");
+    if(fp == NULL){
+        Error_Interface(i, "Could not open destination file");
+        return;
     }
 
     begin = clock();
@@ -688,7 +687,7 @@ void Delete_File(Client *c, Interface *i)
     }
 
     int token;
-    char *file_name = i->args[1];
+    char *file_name = basename(i->args[1]);
 
     if(SendBytes(c, (uint8_t *) file_name, strlen(file_name) + 1, DELETE_FILE) == 0)
     {

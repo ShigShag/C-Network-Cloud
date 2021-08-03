@@ -139,5 +139,5 @@ void DeleteServer(Server *s)
     if(w == WAIT_TIMEOUT) TerminateThread(s->h_ListeningThread, 0);*/
     close(s->Socket);
     free(s->CLIENT);
-    WriteLog(s->log, 1, LOG_NOTICE, "Cleanup");
+    WriteLog(s->log, 1, LOG_NOTICE, "Server deleted");
 }
