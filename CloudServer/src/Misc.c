@@ -250,6 +250,4 @@ void printclientip(int socket)
     
     char *ip = inet_ntoa(client_addr.sin_addr);
     uint16_t port = ntohs(client_addr.sin_port);
-
-    printf("[!] New potential client [%s]:[%d]\n", ip, port);
 }

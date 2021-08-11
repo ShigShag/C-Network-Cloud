@@ -17,7 +17,7 @@ void *ClientListeningThread(void *server)
 
     if(listen(s->Socket, s->max_clients) == 0)
     {
-        WriteLog(s->log, 1, LOG_SUCCESS, "Listening on port:[%d]", s->port);
+        WriteLog(s->log, 0, LOG_SUCCESS, "Listening on port:[%d]", s->port);
 
         while(s->Activated)
         {
@@ -29,7 +29,7 @@ void *ClientListeningThread(void *server)
     }
     else
     {
-        WriteLog(s->log, 1, LOG_FAIL, "Start listening failed: [%s]", strerror(errno));
+        WriteLog(s->log, 0, LOG_FAIL, "Start listening failed: [%s]", strerror(errno));
     }
     return 0;
 }
@@ -42,7 +42,7 @@ void *ClientListMonitor(void *server)
 
     Server *s = (Server *) server;
 
-    WriteLog(s->log, 1, LOG_SUCCESS, "Started client monitor", strerror(errno));
+    WriteLog(s->log, 0, LOG_SUCCESS, "Started client monitor", strerror(errno));
 
 
     while(s->Activated)
@@ -75,11 +75,9 @@ void ManageClient(int socket, Server *s)
     // Receive initial message from client
     if(ReceiveInitialHeader(socket, &token, &id) == 0)
     {
-        WriteLog(s->log, 1, LOG_FAIL, "Could not receive initial header from Client with socket: %u", socket);
+        WriteLog(s->log, 0, LOG_FAIL, "Could not receive initial header from Client with socket: %u", socket);
         return;
     }
-
-    printclientip(socket);
 
     // If client is regular
     if(token == NORMAL_MODE)
@@ -193,7 +191,7 @@ void ManageClient(int socket, Server *s)
         if(err != 0)
         {
             SendInitialHandshake(socket, ABORD, id);
-            WriteLog(s->log, 1, LOG_FAIL, "Could not start client thread: %s", strerror(err));
+            WriteLog(s->log, 0, LOG_FAIL, "Could not start client thread: %s", strerror(err));
             free(c);
             return;
         }
@@ -203,7 +201,7 @@ void ManageClient(int socket, Server *s)
         s->CLIENT[s->clients_connected] = c;
         s->clients_connected ++;
         Unlock_Client_Count(s);
-        WriteLog(s->log, 1, LOG_NOTICE, "New client with id: [%lu]:[%s]:[%d]", c->id, c->ip, c->port);
+        WriteLog(s->log, 0, LOG_NOTICE, "New client with id: [%lu]:[%s]:[%d]", c->id, c->ip, c->port);
 
         // Send ok and id & check for fail
         if(SendInitialHandshake(c->socket, ALL_OK, c->id) == 0)
@@ -244,7 +242,7 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
     Client *client = (Client *) malloc(sizeof(Client));
     if(client == NULL)
     {
-        WriteLog(s->log, 1, LOG_FAIL, "Could not allocate Memory for Client in CreateClient() %s", strerror(errno));
+        WriteLog(s->log, 0, LOG_FAIL, "Could not allocate Memory for Client in CreateClient() %s", strerror(errno));
         return NULL;
     }
 
@@ -352,7 +350,7 @@ void RemoveClient(Server *s, int index)
         s->CLIENT[i] = s->CLIENT[i + 1];
     }
     s->clients_connected --;
-    WriteLog(s->log, 1, LOG_NOTICE, "Removed client with id: [%lu]", id);
+    WriteLog(s->log, 0, LOG_NOTICE, "Removed client with id: [%lu]", id);
 }
 // Removes all clients by calling RemoveClient() until client list is empty
 void RemoveAllClients(Server *s)
@@ -362,7 +360,7 @@ void RemoveAllClients(Server *s)
     {
         RemoveClient(s, s->clients_connected - 1);
     }
-    WriteLog(s->log, 1, LOG_NOTICE, "Removed all clients");
+    WriteLog(s->log, 0, LOG_NOTICE, "Removed all clients");
 }
 // Sets a client to inactiv
 void ReportDisconnect(Client *client)

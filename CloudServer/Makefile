@@ -15,9 +15,9 @@ OBJ_DBG := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DBG_DIR)/%.o)
 
 CFLAGS   := -Wall
 LDFLAGS  := -Llib
-LDLIBS   := -pthread -lcrypto
+LDLIBS   := -pthread -lcrypto -lncurses
 
-DBUGFLAGS := -Wall -g
+DBUGFLAGS := -Wall
 
 .PHONY: all debug clean
 

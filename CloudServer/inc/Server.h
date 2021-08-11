@@ -4,6 +4,7 @@
 #include "Client.h"
 #include "Config.h"
 #include "Logging.h"
+#include "Interface.h"
 
 typedef struct
 {
@@ -11,7 +12,7 @@ typedef struct
     int Socket;
     struct sockaddr_in addr;
     
-    /* Threads */
+    /* Client monitoring threads */
     pthread_t ListeningThread;
     pthread_t ClientMonitorThread;
     
@@ -34,6 +35,8 @@ typedef struct
     /* Logger */
     Log *log;
 
+    /* Interface */
+    Interface *interface;
 } Server;
 
 /* Create Server from config file */
