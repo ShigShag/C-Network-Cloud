@@ -44,7 +44,7 @@ char *Get_Directory_List(char *directory_path)
 
             if(stat(path, &st) == 0)
             {
-                sprintf(temp, "name: %s\tsize: %ld\n", dir->d_name, st.st_size);
+                snprintf(temp, PATH_MAX * sizeof(char), "name: %s\tsize: %ld\n", dir->d_name, st.st_size);
                 append_realloc(&list, temp);
             }
             free(path);
@@ -241,13 +241,4 @@ char ascii_to_hex(int num)
                 return num - 87;
         }
         return (char) num;
-}
-void printclientip(int socket)
-{
-    struct sockaddr_in client_addr;
-    socklen_t AddressLength = sizeof(struct sockaddr_in);
-    getpeername(socket, (struct sockaddr *) &client_addr, &AddressLength);
-    
-    char *ip = inet_ntoa(client_addr.sin_addr);
-    uint16_t port = ntohs(client_addr.sin_port);
 }

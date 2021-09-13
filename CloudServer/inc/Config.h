@@ -22,6 +22,9 @@ typedef struct
 
     /* Server log path */
     char *server_log_path;
+    
+    /* Client log path */
+    char *client_log_directory;
 } Config;
 
 Config *Get_Config(char *f_name);

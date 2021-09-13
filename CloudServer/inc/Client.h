@@ -21,6 +21,8 @@
 #include <sys/sendfile.h>
 #include <fcntl.h>
 
+#include "Logging.h"
+
 typedef struct
 {
     /* Client id */
@@ -51,9 +53,11 @@ typedef struct
     unsigned char *aes_key;
 
     /* Cloud directory */
-    char *cloud_directory;
-    char *server_cloud_directory;
-    char *completed_cloud_directory;
+    char *complete_cloud_directory;
+
+    /* Logger */
+    Log *log;
+
 } Client;
 
 typedef struct
@@ -71,8 +75,6 @@ void *ClientRoutine(void *client);
 /* Receive file from client */
 void Receive_File(Client *c, char *f_name);
 
-void Receive_File_Fast(Client *c, char *f_name);
-
 /* Send file to client */
 void Send_File(Client *c, char *f_name);
 
@@ -84,11 +86,5 @@ void Delete_File(Client *c, char *f_name);
 
 /* Cat a file */
 void Cat_File(Client *c, char *f_name);
-
-/* Transmission Client Thread */
-void *Receive_Packet_t(void *arg);
-
-/* Resets transmission client array */
-void Reset_Client_Transmission_Array(Client *c);
 
 #endif

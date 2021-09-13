@@ -47,11 +47,6 @@ Server *Create_Server(char *config_file_path)
 
     WriteLog(s->log, 1, LOG_SUCCESS, "Address set");
 
-    s->interface = CreateInterface();
-    if(s->interface == NULL) WriteLog(s->log, 1, LOG_FAIL, "Interface could not be allocated");
-    s->interface->client_list = s->CLIENT;
-    s->interface->clients_connected = &s->clients_connected;
-    
     return s;
 }
 int Create_Socket(Server *s, int receive_timeout_sec)
@@ -117,11 +112,6 @@ int StartServer(Server *s)
         WriteLog(s->log, 1, LOG_FAIL, "Could not start client monitor thread: %s", strerror(err));
     }
 
-    if(s->interface != NULL){
-        err = pthread_create(&s->interface->MainThread, NULL, InterfaceMainRoutine, (void *) s->interface);
-        if(err != 0) WriteLog(s->log, 1, LOG_FAIL, "Could not start server interface: %s", strerror(err));
-    }
-
     WriteLog(s->log, 1, LOG_NOTICE, "MAX_CLIENTS: %d", s->config->max_clients);
 
     if(!s->Activated)
@@ -130,7 +120,7 @@ int StartServer(Server *s)
         return 0;
     }
     
-    while(s->interface->active == 1) sleep(1);
+    getchar();
 
     DeleteServer(s);
     return 1;
@@ -150,7 +140,6 @@ void DeleteServer(Server *s)
     if(w == WAIT_TIMEOUT) TerminateThread(s->h_ListeningThread, 0);*/
     close(s->Socket);
     free(s->CLIENT);
-    DeleteInterface(s->interface);
     WriteLog(s->log, 1, LOG_NOTICE, "Server deleted");
     free(s->log);
     free(s);

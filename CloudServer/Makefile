@@ -32,20 +32,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
-debug: $(DBG_EXE)
-
-$(DBG_EXE): $(OBJ_DBG_DIR) | $(BIN_DBG_DIR)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
-$(OBJ_DBG_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DBG_DIR)
-	$(CC) $(DBUGFLAGS) -c $< -o $@
-
-$(BIN_DBG_DIR) $(OBJ_DBG_DIR):
-	mkdir -p $@
-
 clean:
 	@$(RM) -rv $(BIN_DIR) $(OBJ_DIR)
-	@$(RM) -rv $(BIN_DBG_DIR) $(OBJ_DBG_DIR)
 
 -include $(OBJ:.o=.d)
--include $(OBJ_DBG:.o=.d)

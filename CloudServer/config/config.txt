@@ -5,4 +5,5 @@ max_clients 500
 cloud_directory cloud/
 client_database_path config/client_database.txt
 client_credentials_path config/credentials.txt
-server_log_path Log/logs.log
+server_log_path Log/server.log
+client_log_directory Log/

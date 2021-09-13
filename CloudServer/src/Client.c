@@ -18,11 +18,14 @@ void *ClientRoutine(void *client)
     
     while(c->Active)
     {
+        
         Token = ReceiveBytes(client, &Buffer, &BytesReceived);
-        printf("Token Received: %d\n", Token);
-        printf("Bytes Received: %ld\n", BytesReceived);
+        WriteLog(c->log, 1, LOG_NOTICE, "Token: %d", Token);
+        WriteLog(c->log, 1, LOG_NOTICE, "Message Size in bytes: %lu", BytesReceived);
+
         if(Token == 0)
         {
+            WriteLog(c->log, 1, LOG_WARNING, "Received Token 0 from client -> exiting...");
             c->Active = 0;
             continue;
         }
@@ -36,9 +39,6 @@ void *ClientRoutine(void *client)
             case PULL_FILE:
                 Send_File(c, (char *) Buffer);
                 break;
-
-            case PUSH_FILE_FAST:
-                Receive_File_Fast(c, (char *) Buffer);
 
             case LIST_FILE:
                 List_File(c);
@@ -64,18 +64,17 @@ void Receive_File(Client *c, char *f_name)
     if(c == NULL) return;
     if(!c->Active) return;
 
+    WriteLog(c->log, 1, LOG_NOTICE, "Client wants to push file: [%s]", f_name);
+
     FILE *fp;
-    char *path = append_malloc(c->server_cloud_directory, c->cloud_directory);
-    append_realloc(&path, f_name);
+    char *path = append_malloc(c->complete_cloud_directory, f_name);
     unsigned long bytes_received;
-    clock_t begin, end;
-    double total_time;
 
     if(File_Exists(path))
     {
         free(path);
         SendBytes(c, NULL, 0, FILE_ALREADY_EXISTS);
-        printf("File already exists\n");
+        WriteLog(c->log, 1, LOG_FAIL, "File: [%s] already exists", f_name);
         return;
     }
 
@@ -85,151 +84,67 @@ void Receive_File(Client *c, char *f_name)
     {
         free(path);
         SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("Could not open file\n");
+        WriteLog(c->log, 1, LOG_FAIL, "File: [%s] could not be opened", f_name);
         return;
     }
 
     if(SendBytes(c, NULL, 0, PUSH_FILE) == 0)
     {
         free(path);
-        printf("Send bytes failed\n");
+        WriteLog(c->log, 1, LOG_WARNING, "Could not send bytes to client");
         return;
     }
 
-    begin = clock();
     bytes_received = ReceiveFile(c, fp);
-    end = clock();
-    total_time = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("Received: %ld bytes in %f seconds\n", bytes_received, total_time);
+    if(bytes_received == 0) WriteLog(c->log, 1, LOG_FAIL, "Could not receive file because of socket error - [%lu] bytes were received", bytes_received);
+    else WriteLog(c->log, 1, LOG_SUCCESS, "File: [%s] was received - size: [%lu]", f_name, bytes_received);
 
     fclose(fp);
     free(path);
-}
-void Receive_File_Fast(Client *c, char *f_name)
-{
-    if(c == NULL) return;
-    if(!c->Active) return;
-
-    char *path;
-    FILE *fp;
-
-    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
-    append_realloc(&path, f_name);
-
-    if(File_Exists(path))
-    {
-        free(path);
-        SendBytes(c, NULL, 0, FILE_ALREADY_EXISTS);
-        printf("File already exists\n");
-        return;
-    }
-
-    fp = fopen(path, "wb+");
-
-    if(fp == NULL)
-    {
-        free(path);
-        SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("Could not open file\n");
-        return;
-    }
-
-    c->transmission_client_allowed = 1;
-
-    if(SendBytes(c, NULL, 0, PUSH_FILE_FAST) == 0)
-    {
-        free(path);
-        printf("Send bytes failed\n");
-        fclose(fp);
-        return;
-    }
-
-    /* Wait for transmission clients to connect -> Total wait time 2 seconds */
-    int count = 0; 
-    while(c->transmission_client_count != DYNAMIC_CLIENT_TRANSMISSION_COUNT - 1 && count <= 2)
-    {
-        sleep(1);
-        count ++;
-    }
-    if(count > 2 || c->transmission_client_count != DYNAMIC_CLIENT_TRANSMISSION_COUNT - 1)
-    {
-        free(path);
-        Reset_Client_Transmission_Array(c);
-        fclose(fp);
-        return;
-    }
-
-    pthread_t thread_array[DYNAMIC_CLIENT_TRANSMISSION_COUNT];
-
-    for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++)
-    {
-        RECV_ARG *arg = (RECV_ARG *) malloc(sizeof(RECV_ARG));
-        if(arg == NULL) continue;
-
-        arg->in = c->transmission_client_array[i];
-        arg->out = fp;
-
-        int err = pthread_create(&thread_array[i], NULL, Receive_Packet_t, arg);
-        if(err != 0)
-        {
-            printf("[-] Could not create thread: %s\n", strerror(errno));
-        }
-    }
-
-    for(int i = 0;i < DYNAMIC_CLIENT_TRANSMISSION_COUNT;i++)
-    {
-        pthread_join(thread_array[i], NULL);
-    }   
-    
-    fclose(fp);
-    Reset_Client_Transmission_Array(c);
 }
 void Send_File(Client *c, char *f_name)
 {
     if(c == NULL || f_name == NULL) return;
     if(!c->Active) return;
 
+    WriteLog(c->log, 1, LOG_NOTICE, "Client wants to pull file: [%s]", f_name);
+
     int fd;
     char *path;
     
-    double begin, end;
-    float total_time;
-
     uint64_t bytes_send;
     
-    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
+    path = append_malloc(c->complete_cloud_directory, f_name);
     if(path == NULL)
     {
+        WriteLog(c->log, 1, LOG_WARNING, "Could not allocate space for path");
         SendBytes(c, NULL, 0, ERROR_TOKEN);
         return;
     }
-    append_realloc(&path, f_name);
 
     fd = open(path, O_RDONLY);
 
-    printf("path: %s\n", path);
+    WriteLog(c->log, 1, LOG_NOTICE, "Complete files path: [%s]", path);
 
     if(fd == -1)
     {
         free(path);
         SendBytes(c, NULL, 0, FILE_DOES_NOT_EXIST);
-        printf("File does not exist\n");
+        WriteLog(c->log, 1, LOG_FAIL, "File [%s] does not exist - exiting...", path);
         return;
     }
 
     if(SendBytes(c, NULL, 0, PULL_FILE) == 0)
     {
         free(path);
-        printf("Send bytes failed\n");
+        WriteLog(c->log, 1, LOG_WARNING, "Could not send bytes to client");
         close(fd);
         return;
     }
 
-    begin = clock();
     bytes_send = SendFile_t(c, fd);
-    end = clock();
-    total_time = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("%ld bytes send in %f seconds\n", bytes_send, total_time);
+    if(bytes_send == 0) WriteLog(c->log, 1, LOG_FAIL, "Could not receive file because of socket error - [%lu] bytes were send", bytes_send);
+    else WriteLog(c->log, 1, LOG_SUCCESS, "File was send successfully - [%lu] bytes were send", bytes_send);
 
     free(path);
     close(fd);
@@ -239,29 +154,22 @@ void List_File(Client *c)
     if(c == NULL) return;
     if(!c->Active) return;
 
+    WriteLog(c->log, 1, LOG_NOTICE, "Client wants to list files");
+
     char *dir = (char *) malloc((NAME_MAX + 1) * sizeof(char));
     if(dir == NULL)
     {
         SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("[-] Could not allocate space for dir in List_File\n");
+        WriteLog(c->log, 1, LOG_WARNING, "Could not allocate space for directory");
         return; 
     }
 
-    dir = append_malloc(c->server_cloud_directory, c->cloud_directory);
-    if(dir == NULL)
-    {
-        SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("[-] Could not allocate dir\n");
-        return;
-    }
-    printf("dir: %s\n", dir);
-
-    char *dir_list = Get_Directory_List(dir);
+    char *dir_list = Get_Directory_List(c->complete_cloud_directory);
     if(dir_list == NULL)
     {
         free(dir);
         SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("[-] Could not get directory list\n");
+        WriteLog(c->log, 1, LOG_FAIL, "Could not get directory list");
         return;
     }
 
@@ -269,48 +177,40 @@ void List_File(Client *c)
     {
         free(dir);
         free(dir_list);
-        printf("Send bytes failed\n");
+        WriteLog(c->log, 1, LOG_WARNING, "Could not send bytes to client");
         return;
     }
 
+    WriteLog(c->log, 1, LOG_SUCCESS, "Directory list was send to client");
+
     free(dir);
     free(dir_list);
-    printf("List was send to client\n");
+
 }
 
 /* Deletes a file */
 void Delete_File(Client *c, char *f_name)
 {
-    if(c == NULL) return;
+    if(c == NULL || f_name == NULL) return;
     if(!c->Active) return;
 
     char *path;
 
-    if(f_name == 0)
-    {
-        SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("File name was NULL\n");
-        return;
-    }
+    WriteLog(c->log, 1, LOG_NOTICE, "Client wants to delete file: [%s]", f_name);
 
-    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
-    if(path == NULL)
-    {
-        SendBytes(c, NULL, 0, ERROR_TOKEN);
-        printf("Could not allocate space for path in DELETE_FILE %s\n", strerror(errno));
-        return;       
-    }
-    append_realloc(&path, f_name);
+    path = append_malloc(c->complete_cloud_directory, f_name);
 
     if(remove(path) == -1)
     {
         SendBytes(c, NULL, 0, FILE_DOES_NOT_EXIST);
-        printf("Could not delete file: %s -> %s\n", path, strerror(errno));
+        WriteLog(c->log, 1, LOG_FAIL, "Could not delete file: [%s] -> [%s]", path, strerror(errno));
         free(path);
         return;
     }
 
     SendBytes(c, NULL, 0, DELETE_FILE);
+    WriteLog(c->log, 1, LOG_SUCCESS, "File: [%s] was deleted", f_name);
+
     free(path);
 }
 void Cat_File(Client *c, char *f_name)
@@ -318,62 +218,35 @@ void Cat_File(Client *c, char *f_name)
     if(c == NULL || f_name == NULL) return;
     if(!c->Active) return;
 
+    WriteLog(c->log, 1, LOG_NOTICE, "Client wants to cat file: [%s]", f_name);
+
     char *path;
     int fd;
-    double begin, end;
-    float total_time;
     uint64_t bytes_send;
 
-    path = append_malloc(c->server_cloud_directory, c->cloud_directory);
-    if(path == NULL)
-    {
-        SendBytes(c, NULL, 0, ERROR_TOKEN);
-        return;
-    }
-    append_realloc(&path, f_name);
+    path = append_malloc(c->complete_cloud_directory, f_name);
 
     fd = open(path, O_RDONLY);
     if(fd == -1)
     {
         free(path);
         SendBytes(c, NULL, 0, FILE_DOES_NOT_EXIST);
-        printf("File does not exist\n");
+        WriteLog(c->log, 1, LOG_FAIL, "File [%s] does not exist", f_name);
         return;
     }
 
     if(SendBytes(c, NULL, 0, CAT_FILE) == 0)
     {
         free(path);
-        printf("Send bytes failed\n");
+        WriteLog(c->log, 1, LOG_WARNING, "Could not send bytes to client");
         close(fd);
         return;
     }
 
-    begin = clock();
     bytes_send = SendFile_t(c, fd);
-    end = clock();
-
-    total_time = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("%ld bytes send in %f seconds\n", bytes_send, total_time);
+    if(bytes_send == 0) WriteLog(c->log, 1, LOG_FAIL, "Could not send bytes because of socket error - [%lu] bytes were send", bytes_send);
+    else WriteLog(c->log, 1, LOG_SUCCESS, "Cat of file [%s] was send - bytes send: [%lu]", f_name, bytes_send);
 
     free(path);
     close(fd);
-}
-void *Receive_Packet_t(void *arg)
-{
-    if(arg == NULL) return (void *) 1;
-
-    unsigned long bytes_received = ReceiveFile_f(arg);
-    printf("Bytes received: %ld bytes\n", bytes_received);
-
-    free(arg);
-    return NULL;
-}
-void Reset_Client_Transmission_Array(Client *c)
-{
-    if(c == NULL) return;
-
-    c->transmission_client_allowed = 0;
-    memset(c->transmission_client_array, 0, DYNAMIC_CLIENT_TRANSMISSION_COUNT * sizeof(int));
-    c->transmission_client_count = 0;
 }

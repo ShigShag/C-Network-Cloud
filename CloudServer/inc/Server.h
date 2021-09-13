@@ -3,8 +3,6 @@
 
 #include "Client.h"
 #include "Config.h"
-#include "Logging.h"
-#include "Interface.h"
 
 typedef struct
 {
@@ -35,8 +33,6 @@ typedef struct
     /* Logger */
     Log *log;
 
-    /* Interface */
-    Interface *interface;
 } Server;
 
 /* Create Server from config file */

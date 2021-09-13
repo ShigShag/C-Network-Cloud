@@ -69,6 +69,14 @@ Config *Get_Config(char *f_name)
             }
             strncpy(c->server_log_path, value, strlen(value) + 1);
         }
+        else if(!strcmp(var, "client_log_directory")){
+            c->client_log_directory = (char *) malloc(strlen(value) +  1);
+            if(c->client_log_directory == NULL){
+                printf("[-] Failed to allocate space for c->client_log_directory: %s\n", strerror(errno));
+                return NULL;
+            }
+            strncpy(c->client_log_directory, value, strlen(value) + 1);
+        }
         else{
             printf("[!] Unknown Parameter in config file: %s\n", var);
         }

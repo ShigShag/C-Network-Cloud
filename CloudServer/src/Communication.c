@@ -444,7 +444,6 @@ uint64_t SendFile_t(Client *c, int fd)
         printf("[-] fstat failed: %s\n", strerror(errno));
         return 0;
     }
-    printf("File size: %ld\n", f_stat.st_size);
     
     uint8_t *Buffer = GetFileHeader(f_stat.st_size);
     if(Buffer == NULL) return 0;

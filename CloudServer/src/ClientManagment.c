@@ -17,7 +17,7 @@ void *ClientListeningThread(void *server)
 
     if(listen(s->Socket, s->max_clients) == 0)
     {
-        WriteLog(s->log, 0, LOG_SUCCESS, "Listening on port:[%d]", s->port);
+        WriteLog(s->log, 1, LOG_SUCCESS, "Listening on port:[%d]", s->port);
 
         while(s->Activated)
         {
@@ -29,7 +29,7 @@ void *ClientListeningThread(void *server)
     }
     else
     {
-        WriteLog(s->log, 0, LOG_FAIL, "Start listening failed: [%s]", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Start listening failed: [%s]", strerror(errno));
     }
     return 0;
 }
@@ -42,7 +42,7 @@ void *ClientListMonitor(void *server)
 
     Server *s = (Server *) server;
 
-    WriteLog(s->log, 0, LOG_SUCCESS, "Started client monitor", strerror(errno));
+    WriteLog(s->log, 1, LOG_SUCCESS, "Started client monitor", strerror(errno));
 
 
     while(s->Activated)
@@ -75,7 +75,7 @@ void ManageClient(int socket, Server *s)
     // Receive initial message from client
     if(ReceiveInitialHeader(socket, &token, &id) == 0)
     {
-        WriteLog(s->log, 0, LOG_FAIL, "Could not receive initial header from Client with socket: %u", socket);
+        WriteLog(s->log, 1, LOG_FAIL, "Could not receive initial header from Client with socket: %u", socket);
         return;
     }
 
@@ -191,7 +191,7 @@ void ManageClient(int socket, Server *s)
         if(err != 0)
         {
             SendInitialHandshake(socket, ABORD, id);
-            WriteLog(s->log, 0, LOG_FAIL, "Could not start client thread: %s", strerror(err));
+            WriteLog(s->log, 1, LOG_FAIL, "Could not start client thread: %s", strerror(err));
             free(c);
             return;
         }
@@ -201,7 +201,7 @@ void ManageClient(int socket, Server *s)
         s->CLIENT[s->clients_connected] = c;
         s->clients_connected ++;
         Unlock_Client_Count(s);
-        WriteLog(s->log, 0, LOG_NOTICE, "New client with id: [%lu]:[%s]:[%d]", c->id, c->ip, c->port);
+        WriteLog(s->log, 1, LOG_NOTICE, "New client with id: [%lu]:[%s]:[%d]", c->id, c->ip, c->port);
 
         // Send ok and id & check for fail
         if(SendInitialHandshake(c->socket, ALL_OK, c->id) == 0)
@@ -229,20 +229,15 @@ void ManageClient(int socket, Server *s)
 // Creates a client
 Client *CreateClient(Server *s, int socket, unsigned long id)
 {
-    if(s == NULL)
-    {
-        return NULL;
-    }
-    if(socket == -1)
-    {
-        return NULL;
-    }
+    if(s == NULL) return NULL;
+    if(socket == -1) return NULL;
 
+    char *temp_cloud_directory_path;
     struct sockaddr_in client_addr;
     Client *client = (Client *) malloc(sizeof(Client));
     if(client == NULL)
     {
-        WriteLog(s->log, 0, LOG_FAIL, "Could not allocate Memory for Client in CreateClient() %s", strerror(errno));
+        WriteLog(s->log, 1, LOG_FAIL, "Could not allocate Memory for Client in CreateClient() %s", strerror(errno));
         return NULL;
     }
 
@@ -267,8 +262,8 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
     client->Active = 0;
 
     // If client needs new unique id and directory
-    client->cloud_directory = (char *) malloc((NAME_MAX + 1) * sizeof(char));
-    if(client->cloud_directory == NULL) 
+    temp_cloud_directory_path = (char *) malloc((NAME_MAX + 1) * sizeof(char));
+    if(temp_cloud_directory_path == NULL) 
     {
         free(client);
         return NULL;
@@ -298,25 +293,23 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
         client->id = id;
         client->directory = Get_Client_Directory(s, client->id);
     }
-    snprintf(client->cloud_directory, (NAME_MAX + 1) * sizeof(char), "%lu/", client->directory);
+    snprintf(temp_cloud_directory_path, (NAME_MAX + 1) * sizeof(char), "%lu/", client->directory);
 
-    client->server_cloud_directory = (char *) malloc((strlen(s->config->cloud_directory) + 1) * sizeof(char));
-    if(client->server_cloud_directory == NULL)
+    client->complete_cloud_directory = (char *) malloc((PATH_MAX + 1) * sizeof(char));
+    if(client->complete_cloud_directory == NULL)
     {
         free(client);
         return NULL;
     }
 
-    // This line makes sense
-    strncpy(client->server_cloud_directory, s->config->cloud_directory, (strlen(s->config->cloud_directory) + 1) * sizeof(char));
+    client->complete_cloud_directory = append_malloc(s->config->cloud_directory, temp_cloud_directory_path);
+    free(temp_cloud_directory_path);
 
-    client->completed_cloud_directory = (char *) malloc((PATH_MAX + 1) * sizeof(char));
-    if(client->server_cloud_directory == NULL)
-    {
-        free(client);
-        return NULL;
-    }
-    client->completed_cloud_directory = append_malloc(client->server_cloud_directory, client->cloud_directory);
+    /* Create logger and log path*/
+    char temp[PATH_MAX + 1];
+    snprintf(temp, sizeof(temp), "%sclient-%lu.log", s->config->client_log_directory, client->id);
+    client->log = CreateLogger(temp);
+
     return client;
 }
 
@@ -337,9 +330,7 @@ void RemoveClient(Server *s, int index)
     // TODO Terminate Threads
     free(c->transmission_client_array);
     close(c->socket);
-    free(c->cloud_directory);
-    free(c->server_cloud_directory);
-    free(c->completed_cloud_directory);
+    free(c->complete_cloud_directory);
 
     id = c->id;
 
@@ -350,7 +341,7 @@ void RemoveClient(Server *s, int index)
         s->CLIENT[i] = s->CLIENT[i + 1];
     }
     s->clients_connected --;
-    WriteLog(s->log, 0, LOG_NOTICE, "Removed client with id: [%lu]", id);
+    WriteLog(s->log, 1, LOG_NOTICE, "Removed client with id: [%lu]", id);
 }
 // Removes all clients by calling RemoveClient() until client list is empty
 void RemoveAllClients(Server *s)
@@ -360,7 +351,7 @@ void RemoveAllClients(Server *s)
     {
         RemoveClient(s, s->clients_connected - 1);
     }
-    WriteLog(s->log, 0, LOG_NOTICE, "Removed all clients");
+    WriteLog(s->log, 1, LOG_NOTICE, "Removed all clients");
 }
 // Sets a client to inactiv
 void ReportDisconnect(Client *client)
