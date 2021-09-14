@@ -78,3 +78,37 @@ void FreePassword(char *password, unsigned int *count)
     free(password);
     *count = 0;
 }
+/* DO NOT PASS STRING INITIALIZED POINTERS TO THIS FUNCTION -> WILL CAUSE SEGMENTATION FAULT */
+void mkdir_recursive(char *dir, mode_t mode)
+{
+    char *a;
+    a = strrchr(dir, '/');
+    if(a == NULL){
+        mkdir(dir, mode);
+        return;
+    }
+    *a = '\0';
+    mkdir_recursive(dir, mode);
+    *a = '/';
+    mkdir(dir, mode);
+}
+char *get_directory_name(char *path)
+{
+    if(path == NULL) return NULL;
+
+    char *cpy_path = (char *) malloc((PATH_MAX + 1) * sizeof(char));
+    if(cpy_path == NULL) return NULL;
+
+    strncpy(cpy_path, path, (PATH_MAX + 1) * sizeof(char));
+
+    char *seg = strrchr(cpy_path, '/');
+    
+    // If there is no parent directory
+    if(seg == NULL){
+        free(cpy_path);
+        return NULL;
+    } 
+    
+    *seg = '\0';
+    return cpy_path;
+}

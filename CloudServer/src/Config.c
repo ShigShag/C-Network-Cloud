@@ -40,13 +40,13 @@ Config *Get_Config(char *f_name)
         memset(value, 0, sizeof(value));
         sscanf(line,"%s %s", var, value);
 
-        if(!strcmp(var, "port")){
+        if(!strcmp(var, "port") && strlen(value) > 0){
             c->port = strtol(value, NULL, 10);
-        }else if(!strcmp(var, "receive_timeout")){
+        }else if(!strcmp(var, "receive_timeout") && strlen(value) > 0){
             c->receive_timeout = strtol(value, NULL, 10); 
-        }else if(!strcmp(var, "max_clients")){
+        }else if(!strcmp(var, "max_clients") && strlen(value) > 0){
             c->max_clients = strtol(value, NULL, 10);
-        }else if(!strcmp(var, "receive_timeout")){
+        }else if(!strcmp(var, "receive_timeout") && strlen(value) > 0){
             c->receive_timeout = strtol(value, NULL, 10);
         }else if(!strcmp(var, "cloud_directory") && strlen(value) > 0){
             c->cloud_directory = (char *) malloc(strlen(value) + 1);

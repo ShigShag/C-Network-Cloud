@@ -2,7 +2,6 @@
 #define CLIENT_BACKEND_H
 
 #include "Interface.h"
-#include "ProgressBar.h"
 #include "Config.h"
 
 #define INVALID_SOCKET (-1)
@@ -20,9 +19,6 @@ typedef struct
 
     /* id */
     unsigned long id;
-
-    /* Encryption */
-    unsigned char *aes_key;
     
     /* Config */
     Config *config;
@@ -35,56 +31,9 @@ typedef struct
     Interface *interface;
 } Interface_arg;
 
-/* transmission client */
-typedef struct 
-{
-    /* socket */
-    int socket;
-    struct sockaddr_in addr;
-    int is_connected;
-
-    /* Parent client id */
-    unsigned long p_id;
-
-    /* thread */
-    pthread_t thread;
-} client_t;
-
-/* Transmission client arguments */
-typedef struct
-{
-    /* File descriptor */
-    int in;
-
-    /* Socket */
-    int out;
-
-    /* File offset */
-    off_t offset;
-
-    /* Count of bytes to send over socket */
-    int count;
-} SEND_ARG;
-
-typedef struct
-{
-    /* socket */
-    int in;
-
-    /* File to write */
-    FILE *out;
-
-} RECV_ARG;
 
 /* Client initialisation */
 Client *Create_Client(char *config_file_path);
-
-/* Transmission clients */
-client_t *Create_Transmission_Client(char *ip, int port, unsigned long p_id);
-int Connect_Transmission_Client(client_t *c);
-int Initial_Handshake_t(client_t *c);
-void *Send_Packet_t(void *arg);
-void Delete_Transmission_Client(client_t *c);
 
 /* Server connection */
 int Connect_To_Server(Client *c);
@@ -99,8 +48,6 @@ int Translate_Input(char *input);
 
 /* File transmition */
 void Push_File(Client *c, Interface *i);
-
-void Push_File_f(Client *c, Interface *i);
 
 /* File pulling */
 void Pull_File(Client *c, Interface *i);

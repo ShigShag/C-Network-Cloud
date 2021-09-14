@@ -36,6 +36,8 @@ For Windows users [WSL 2](https://docs.microsoft.com/en-us/windows/wsl/install-w
 
 ### Server
 
+To build the server use the [Makefile](https://github.com/ShigShag/C-Network-Cloud/blob/master/CloudServer/Makefile).  
+
 The server requires a **configuration file** to start. The path to this file needs to be passed as the first argument to the server. 
 
 Example configuration file:
@@ -50,24 +52,58 @@ server_log_path Log/server.log
 client_log_directory Log/
 ```
 
-Example server start:
+**Keyword description:**
+
+| Keyword      | Description| Required |
+|--------------|------------|----------|
+| port | The port the server should listen for clients| yes|
+| receive_timeout      | The time for the server to wait for an answer from the client before removing it. 0 -> infinite   | No |
+| max_clients | Maximum number of clients for the server to accept. If not given defaults to 10| No |
+| cloud_directory | Path to the **directory** which holds all the clients directories | yes|
+| client_database_path | Path of the **file** which holds client id`s and the directory paths for the clients | yes |
+| client_credentials_path | Path of the **file** which holds clients passwords | yes |
+| server_log_path | Path to the logging **file** for the server | no|
+|client_log_directory| Path to the **directory** which holds the clients logs | no| 
+
+
+**Example server start:**
 
 ```bash
 ./server yourconfigfile
 ```
 
+The program will automatically create the given directories and files.  
+
 ---
-Keyword description:
+
+### Client
+
+To build the server use the [Makefile](https://github.com/ShigShag/C-Network-Cloud/blob/master/CloudClient/Makefile).  
+
+The client requires a **configuration file** to start. The path to this file needs to be passed as the first argument to the client. 
+
+Example configuration file:
+```
+ip 127.0.0.1
+port 8080
+receive_timeout 0
+identity_path config/identity.txt
+```
+
+**Keyword description:**
 
 | Keyword      | Description| Required |
 |--------------|------------|----------|
-| port | The port the srever should listen for clients| yes|
-| receive_timeout      | The time for the server to wait for an answer from the client before removing it. 0 -> infinite   | No |
-| max_clients | Maximum number of clients for the server to accept. If not given defaults to 10| No |
-| cloud_directory | Path to the directory which holds all the clients directories | yes|
-| client_database_path | Path of the file which holds client id`s and the directory paths for the clients | yes |
-| client_credentials_path | Path of the file which holds clients passwords | yes |
-| server_log_path | Path to the logging file for the server | no|
-|client_log_directory| Path to the directory which holds the clients logs | no| 
+|ip | The ip address of the server | yes | 
+| port | The port the server is listening for clients| yes|
+| receive_timeout      | The time for the client to wait for an answer from the server before disconnecting. 0 -> infinite   | No |
+|identity_path| Path to the **file** which holds the id of the client. If not given a new one will be created | No | 
 
-### Client
+
+**Example client start:**
+
+```bash
+./client yourconfigfile
+```
+
+The program will automatically create the given directories and files.

@@ -14,5 +14,6 @@ typedef struct
 } Config;
 
 Config *Get_Config(char *f_name);
+void Delete_Config(Config *c);
 
 #endif

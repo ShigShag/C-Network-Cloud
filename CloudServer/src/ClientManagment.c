@@ -211,21 +211,6 @@ void ManageClient(int socket, Server *s)
             c->Active = 0;
         }
     }
-    else if(token == DOWNLOAD_MODE)
-    {
-        Lock_Client_Count(s);
-        for(int i = 0;i < s->clients_connected;i++)
-        {
-            if(s->CLIENT[i]->id == id  && s->CLIENT[i]->transmission_client_allowed == 1)
-            {
-                if(s->CLIENT[i]->transmission_client_count < DYNAMIC_CLIENT_TRANSMISSION_COUNT)
-                {
-                    s->CLIENT[i]->transmission_client_array[s->CLIENT[i]->transmission_client_count++] = socket;
-                }
-            }
-        }
-        Unlock_Client_Count(s);
-    }
 }
 
 // Creates a client
@@ -250,15 +235,6 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
     client->addr = client_addr;
     client->port = ntohs(client_addr.sin_port);
     client->ip = inet_ntoa(client_addr.sin_addr);
-
-    client->transmission_client_allowed = 0;
-    client->transmission_client_count = 0;
-    client->transmission_client_array = (int *) calloc(DYNAMIC_CLIENT_TRANSMISSION_COUNT, sizeof(int));
-    if(client->transmission_client_array == NULL)
-    {
-        free(client);
-        return NULL;
-    }
 
     // Client is added to server list and activatet in manage client
     client->Active = 0;
@@ -297,15 +273,14 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
     }
     snprintf(temp_cloud_directory_path, (NAME_MAX + 1) * sizeof(char), "%lu/", client->directory);
 
-    client->complete_cloud_directory = (char *) malloc((PATH_MAX + 1) * sizeof(char));
+    client->complete_cloud_directory = append_malloc(s->config->cloud_directory, temp_cloud_directory_path);
+    free(temp_cloud_directory_path);
     if(client->complete_cloud_directory == NULL)
     {
         free(client);
+        
         return NULL;
     }
-
-    client->complete_cloud_directory = append_malloc(s->config->cloud_directory, temp_cloud_directory_path);
-    free(temp_cloud_directory_path);
 
     /* Create logger and log path*/
     if(s->config->client_log_directory != NULL)
@@ -333,7 +308,6 @@ void RemoveClient(Server *s, int index)
     if(c->Active) c->Active = 0;
 
     // TODO Terminate Threads
-    free(c->transmission_client_array);
     close(c->socket);
     free(c->complete_cloud_directory);
 

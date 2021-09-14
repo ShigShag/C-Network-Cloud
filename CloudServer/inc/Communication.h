@@ -92,8 +92,6 @@ uint8_t ReceivePassword(int socket, int8_t **pw);
 #define FILE_HEADER_SIZE (sizeof(unsigned long)) // = 8
 #define FILE_BLOCK_SIZE 65535     // 4 Megabytes
 
-#define DYNAMIC_CLIENT_TRANSMISSION_COUNT 4
-
 /* Header Structure:
  * [FILE LENGTH   ][File bytes       ]
  * [8 Byte        ][msg Len. Bytes   ] 
@@ -105,25 +103,9 @@ uint8_t *GetFileHeader(uint64_t ByteArraySize);
 int32_t ProcessFileHeader(uint8_t *ByteArray, uint64_t ByteArraySize, uint64_t *FileSize);
 
 /* Transmision */
-uint64_t SendFile(Client *c, uint8_t *ByteArray, uint64_t ByteArraySize); 
 uint64_t SendFile_t(Client *c, int fd);
 
 /* Receiving */
 uint64_t ReceiveFile(Client *c, FILE *fp);
-
-/* -------------------------------------------------------- */
-/* Transmission client */
-/* Header Structure:
- * [File offset   ][Byte count    ][File bytes       ]
- * [U  long       ][U long        ][msg Len. Bytes   ] 
- * */
-
-#define DYNAMIC_CLIENT_TRANSMISSION_COUNT 4
-#define TRANSMISSION_HEADER_SIZE (sizeof(uint64_t) * 2)  // = 16
-
-//uint8_t *GetTransmissionHeader(uint64_t ByteArraySize, uint64_t offset);
-//uint64_t SendFile_f(SEND_ARG *arg);
-int32_t ProcessTransmissionHeader(uint8_t *Header, uint64_t ByteArraySize, int64_t *offset, uint64_t *count);
-uint64_t ReceiveFile_f(RECV_ARG *arg);
 
 #endif

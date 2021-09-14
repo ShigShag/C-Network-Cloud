@@ -40,11 +40,6 @@ typedef struct
     int port;
     char *ip;
 
-    /* Fast transmission clients */
-    int transmission_client_allowed;
-    int transmission_client_count;
-    int *transmission_client_array;
-
     /* Status */
     int Active;
     int test_mode;
