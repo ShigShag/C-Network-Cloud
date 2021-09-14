@@ -8,6 +8,7 @@ This is a small and simple cloud storage system designed to store single files o
 * [Features](#features)
 * [Requirements](#requirements)
 * [Installation](#installation)
+* [Usage](#usage)
 
 ## Overview
 
@@ -18,6 +19,9 @@ The remote server saves files in its local file system. Because of that the data
 The program was developed on [Ubuntu 20.04 LTS](https://ubuntu.com/download/desktop) and compiled with [gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0](https://gcc.gnu.org/).  
 
 For Windows users [WSL 2](https://docs.microsoft.com/en-us/windows/wsl/install-win10) is recommended with [Ubuntu 20.04 LTS](https://www.microsoft.com/en-us/p/ubuntu-2004-lts/9n6svws3rx71?activetab=pivot:overviewtab).
+
+Disclaimer:  
+This is a project i wrote to expand my C knowledge and practice programming. Bugs and runtime errors can occur.
 
 ## Features
 
@@ -107,3 +111,26 @@ identity_path config/identity.txt
 ```
 
 The program will automatically create the given directories and files.
+
+## Usage
+
+### Server
+
+While running the server will display logs.  
+Currently there is no interaction between server and user. To **stop** the server press enter.
+
+---
+
+### Client
+
+After executing the client will try to connect with the server. if a connection is established the server will request a password. If the password is correct the user now can start using the cloud.
+
+| Command      | Arguments |Description|
+|--------------|-----------|-----------|
+| exit | None | Ends the connection and exits the client | 
+| list / ls | None |Shows a list of all the files currently saved in the cloud |
+| push | Local-Filename | Pushes the file on the cloud. Filename is the path to the file in the local filesystem |
+| pull | Cloud-Filename Local-Filename | Pulls the cloud file and saves it in the local file |
+| delete | Cloud-Filename | Shows the Ascii contents of a file in the cloud |
+| cls / clear | None | Clears the terminal |
+| help | None | Displays a help page |
