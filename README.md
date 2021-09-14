@@ -46,10 +46,10 @@ port 8080
 receive_timeout 0
 max_clients 500
 cloud_directory cloud/
-client_database_path config/client_database.txt
-client_credentials_path config/credentials.txt
-server_log_path Log/server.log
-client_log_directory Log/
+client_database_path client_database/client_database.txt
+client_credentials_path client_credentials/credentials.txt
+server_log_path Server-Log/server.log
+client_log_directory Client-Logs/
 ```
 
 **Keyword description:**
@@ -87,7 +87,7 @@ Example configuration file:
 ip 127.0.0.1
 port 8080
 receive_timeout 0
-identity_path config/identity.txt
+identity_path identity.txt
 ```
 
 **Keyword description:**
