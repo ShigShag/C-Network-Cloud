@@ -1,6 +1,6 @@
 SRC_DIR := src
 OBJ_DIR := obj
-BIN_DIR := ~/testground
+BIN_DIR := bin
 
 EXE := $(BIN_DIR)/Server
 SRC := $(wildcard $(SRC_DIR)/*.c)
@@ -24,6 +24,6 @@ $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
 clean:
-	@$(RM) -rv $(OBJ_DIR)
+	@$(RM) -rv  $(BIN_DIR) $(OBJ_DIR)
 
 -include $(OBJ:.o=.d)
