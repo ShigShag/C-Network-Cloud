@@ -151,6 +151,7 @@ void DeleteServer(Server *s)
     free(s->CLIENT);
     WriteLog(s->log, 1, LOG_NOTICE, "Server deleted");
     free(s->log);
+    Delete_Config(s->config);
     free(s);
 }
 void CreateServerEnvionment(Server *s)
@@ -165,32 +166,48 @@ void CreateServerEnvionment(Server *s)
     WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", s->config->cloud_directory);
 
     /* directory for saving clients logs */
-    mkdir_recursive(s->config->client_log_directory, 0700);
-    WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", s->config->client_log_directory);
+    if(s->config->client_log_directory != NULL)
+    {
+        mkdir_recursive(s->config->client_log_directory, 0700);
+        WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", s->config->client_log_directory);
+    }
+
+    /* directory for server logs */
+    if(s->config->server_log_path != NULL)
+    {
+        dir = get_directory_name(s->config->server_log_path);
+        if(dir != NULL)
+        {
+            mkdir_recursive(dir, 0700);
+            WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", dir);
+            free(dir);
+        }
+        fd = open(s->config->server_log_path, O_CREAT, S_IRUSR | S_IWUSR);
+        WriteLog(s->log, 1, LOG_NOTICE, "Created file: [%s]", s->config->server_log_path);
+        close(fd);
+    }
 
     /* directory for saving client authentication */
     dir = get_directory_name(s->config->client_credentials_path);
-    mkdir_recursive(dir, 0700);
-    WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", dir);
-    free(dir);
+    if(dir != NULL)
+    {
+        mkdir_recursive(dir, 0700);
+        WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", dir);
+        free(dir);            
+    }
+
     fd = open(s->config->client_credentials_path, O_CREAT, S_IRUSR | S_IWUSR);
     WriteLog(s->log, 1, LOG_NOTICE, "Created file: [%s]", s->config->client_credentials_path);
     close(fd);
 
-    /* directory for server logs */
-    dir = get_directory_name(s->config->server_log_path);
-    mkdir_recursive(dir, 0700);
-    WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", dir);
-    free(dir);
-    fd = open(s->config->server_log_path, O_CREAT, S_IRUSR | S_IWUSR);
-    WriteLog(s->log, 1, LOG_NOTICE, "Created file: [%s]", s->config->server_log_path);
-    close(fd);
-
     /* directory for saving clients id´s */
     dir = get_directory_name(s->config->client_database_path);
-    mkdir_recursive(dir, 0700);
-    WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", dir);
-    free(dir);
+    if(dir != NULL)
+    {
+        mkdir_recursive(dir, 0700);
+        WriteLog(s->log, 1, LOG_NOTICE, "Created directory: [%s]", dir);
+        free(dir);
+    }
     fd = open(s->config->client_database_path, O_CREAT, S_IRUSR | S_IWUSR);
     WriteLog(s->log, 1, LOG_NOTICE, "Created file: [%s]", s->config->client_database_path);
     close(fd);

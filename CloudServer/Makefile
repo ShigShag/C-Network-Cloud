@@ -1,14 +1,14 @@
 SRC_DIR := src
 OBJ_DIR := obj
-BIN_DIR := bin
+BIN_DIR := ~/testground
 
 EXE := $(BIN_DIR)/Server
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-CFLAGS   := -Wall
+CFLAGS   := -Wall -g
 LDFLAGS  := -Llib
-LDLIBS   := -pthread -lcrypto -lncurses
+LDLIBS   := -pthread -lcrypto
 
 .PHONY: all clean
 
@@ -24,6 +24,6 @@ $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
 clean:
-	@$(RM) -rv $(BIN_DIR) $(OBJ_DIR)
+	@$(RM) -rv $(OBJ_DIR)
 
 -include $(OBJ:.o=.d)

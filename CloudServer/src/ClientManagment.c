@@ -168,8 +168,10 @@ void ManageClient(int socket, Server *s)
             if(Add_Client_credentials(s, c->id, (char *) pw) == 0)
             {
                 SendInitialHandshake(socket, PASSWORD_DECLINED, c->id);
+                free(c->complete_cloud_directory);
                 free(c);
                 free_memset(pw, strlen((char *) pw));
+                return;
             }
 
             // Delete password from memory
@@ -306,10 +308,13 @@ Client *CreateClient(Server *s, int socket, unsigned long id)
     free(temp_cloud_directory_path);
 
     /* Create logger and log path*/
-    char temp[PATH_MAX + 1];
-    snprintf(temp, sizeof(temp), "%sclient-%lu.log", s->config->client_log_directory, client->id);
-    client->log = CreateLogger(temp);
-
+    if(s->config->client_log_directory != NULL)
+    {
+        char temp[PATH_MAX + 1];
+        snprintf(temp, sizeof(temp), "%sclient-%lu.log", s->config->client_log_directory, client->id);
+        client->log = CreateLogger(temp);
+    }
+    
     return client;
 }
 

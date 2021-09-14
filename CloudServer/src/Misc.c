@@ -266,7 +266,13 @@ char *get_directory_name(char *path)
     strncpy(cpy_path, path, (PATH_MAX + 1) * sizeof(char));
 
     char *seg = strrchr(cpy_path, '/');
+    
+    // If there is no parent directory
+    if(seg == NULL){
+        free(cpy_path);
+        return NULL;
+    } 
+    
     *seg = '\0';
-
     return cpy_path;
 }

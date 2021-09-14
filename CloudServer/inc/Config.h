@@ -8,7 +8,6 @@ typedef struct
     int receive_timeout;
 
     /* server */
-    int mode;
     int max_clients;
     
     /* Cloud node location */
@@ -28,5 +27,6 @@ typedef struct
 } Config;
 
 Config *Get_Config(char *f_name);
+void Delete_Config(Config *c);
 
 #endif
