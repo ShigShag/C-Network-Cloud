@@ -24,7 +24,6 @@ int Client_In_Database(Server *s, unsigned long id_)
         return 0;
     }
 
-    fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line), fp))
     {
         sscanf(line, "%lu %lu", &id, &directory);
@@ -53,7 +52,6 @@ int Directory_In_Database(Server *s, unsigned long directory_)
         return 0;
     }
 
-    fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line), fp))
     {
         sscanf(line, "%lu %lu", &id, &directory);
@@ -82,7 +80,6 @@ char *Get_Client_Directory_Char(Server *s, unsigned long id_)
         return 0;
     }
 
-    fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line), fp))
     {
         sscanf(line, "%lu %lu", &id, &directory);
@@ -115,7 +112,6 @@ unsigned long Get_Client_Directory(Server *s, unsigned long id_)
         return 0;
     }
 
-    fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line), fp))
     {
         sscanf(line, "%lu %lu", &id, &directory);
@@ -249,8 +245,7 @@ unsigned char *Format_Client_Credentials(unsigned long id, unsigned char *pw_has
     }
 
     unsigned char *id_uint8 = Uint64ToUint8(id);
-    //printf("Id save: ");
-    for(int i = 0;i< 8;i++) printf("%.2x", id_uint8[i]);
+
     printf("\n");
     memcpy(r, id_uint8, CLIENT_ID_SIZE * sizeof(unsigned char));
     memcpy(r + (CLIENT_ID_SIZE * sizeof(unsigned char)), pw_hash, CLIENT_DATABASE_PASSWORD_HASH_SIZE * sizeof(unsigned char));
@@ -345,8 +340,6 @@ unsigned char *Get_Client_Salt(Server *s, unsigned long id)
         return 0;
     }
 
-    // Skip first line
-    fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line),fp) != NULL)
     {
         Get_Client_Credentials(line, dc);
@@ -391,8 +384,6 @@ int Check_Client_Password(Server *s, unsigned long id, char *pw)
     unsigned char *pw_hash;
     char line[(CLIENT_DATABASE_TOTAL_ENTRY_SIZE * 2) + 10];
 
-    // Skip first line
-    fgets(line, sizeof(line), fp);
     while(fgets(line, sizeof(line), fp))
     {
         Get_Client_Credentials(line, dc);

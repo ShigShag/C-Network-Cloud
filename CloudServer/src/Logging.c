@@ -41,7 +41,7 @@ Log *CreateLogger(char *log_file_path)
 /* Write log */
 int WriteLog(Log *l, int ConsoleOutput, int prioritie, const char *format, ...)
 {
-    if(l == NULL && ConsoleOutput == 0) return 0;
+    if(ConsoleOutput == 0) return 0;
 
     FILE *fp = NULL;
 

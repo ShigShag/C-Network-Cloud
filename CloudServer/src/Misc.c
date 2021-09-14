@@ -242,3 +242,31 @@ char ascii_to_hex(int num)
         }
         return (char) num;
 }
+/* DO NOT PASS STRING INITIALIZED POINTERS TO THIS FUNCTION -> WILL CAUSE SEGMENTATION FAULT */
+void mkdir_recursive(char *dir, mode_t mode)
+{
+    char *a;
+    a = strrchr(dir, '/');
+    if(a == NULL){
+        mkdir(dir, mode);
+        return;
+    }
+    *a = '\0';
+    mkdir_recursive(dir, mode);
+    *a = '/';
+    mkdir(dir, mode);
+}
+char *get_directory_name(char *path)
+{
+    if(path == NULL) return NULL;
+
+    char *cpy_path = (char *) malloc((PATH_MAX + 1) * sizeof(char));
+    if(cpy_path == NULL) return NULL;
+
+    strncpy(cpy_path, path, (PATH_MAX + 1) * sizeof(char));
+
+    char *seg = strrchr(cpy_path, '/');
+    *seg = '\0';
+
+    return cpy_path;
+}

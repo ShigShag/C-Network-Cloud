@@ -23,4 +23,8 @@ uint64_t Uint8ToUint64(const uint8_t *ByteArray);
 void free_memset(void *buf, unsigned long count);
 char ascii_to_hex(int num);
 
+/* DO NOT PASS STRING INITIALIZED POINTERS TO THIS FUNCTION -> WILL CAUSE SEGMENTATION FAULT */
+void mkdir_recursive(char *dir, mode_t mode);
+
+char *get_directory_name(char *path);
 #endif

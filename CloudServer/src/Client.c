@@ -124,7 +124,7 @@ void Send_File(Client *c, char *f_name)
 
     fd = open(path, O_RDONLY);
 
-    WriteLog(c->log, 1, LOG_NOTICE, "Complete files path: [%s]", path);
+    WriteLog(c->log, 1, LOG_NOTICE, "Complete file path: [%s]", path);
 
     if(fd == -1)
     {

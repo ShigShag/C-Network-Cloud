@@ -47,4 +47,7 @@ int StartServer(Server *s);
 /* Delete Serer and clean everything up */
 void DeleteServer(Server *s);
 
+/* Create server environment -> all directories given in config file*/
+void CreateServerEnvionment(Server *s);
+
 #endif
